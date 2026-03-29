@@ -6,7 +6,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse, RedirectResponse
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # startup

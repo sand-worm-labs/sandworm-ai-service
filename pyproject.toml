@@ -17,6 +17,7 @@ pydantic-settings = "^2.5.2"
 orjson = "^3.11.5"
 httpx = "^0.28.0"
 aiohttp = {extras = ["speedups"], version = "^3.13.4"}
+qdrant-client = "^1.17.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.15.8"

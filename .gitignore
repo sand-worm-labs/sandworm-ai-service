@@ -1,0 +1,12 @@
+thon
+.python-version
+
+# cache
+__pycache__
+local_cache
+.ruff_cache
+.pytest_cache
+
+# ide
+.idea
+.vscode/

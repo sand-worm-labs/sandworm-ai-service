@@ -1,6 +1,10 @@
 thon
 .python-version
 
+# env — ignore all .env files except the example
+.env*
+!.env.example
+
 # cache
 __pycache__
 local_cache

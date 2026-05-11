@@ -5,6 +5,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse, RedirectResponse
 
+from src.web.routes.chat import router as chat_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,6 +44,9 @@ async def validation_exception_handler(_, exc: Exception):
         status_code=400,
         content={"detail": str(exc)},
     )
+
+
+app.include_router(chat_router)
 
 
 @app.get("/")

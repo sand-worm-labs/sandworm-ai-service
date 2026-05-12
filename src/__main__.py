@@ -1,19 +1,16 @@
 from contextlib import asynccontextmanager
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse, RedirectResponse
-
-from src.web.routes.chat import router as chat_router
-
+from src.web.middleware.auth import verify_handshake
+from src.web.routes.health.router import router as health_router
+from src.web.routes.chat.title import router as title_router
+from src.web.routes.chat.completions import router as completions_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup
     yield
-    # shutdown
-
 
 app = FastAPI(
     title="Sandworm AI Service",
@@ -21,6 +18,7 @@ app = FastAPI(
     redoc_url=None,
     default_response_class=ORJSONResponse,
 )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,29 +28,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.exception_handler(Exception)
 async def exception_handler(_, exc: Exception):
-    return ORJSONResponse(
-        status_code=500,
-        content={"detail": str(exc)},
-    )
+    return ORJSONResponse(status_code=500, content={"detail": str(exc)})
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(_, exc: Exception):
-    return ORJSONResponse(
-        status_code=400,
-        content={"detail": str(exc)},
-    )
+async def validation_exception_handler(_, exc: RequestValidationError):
+    return ORJSONResponse(status_code=400, content={"detail": str(exc)})
 
 
-app.include_router(chat_router)
+
+app.include_router(
+    completions_router,
+    prefix="/chat",
+    dependencies=[Depends(verify_handshake)],
+)
+app.include_router(
+    title_router,
+    prefix="/chat",
+    dependencies=[Depends(verify_handshake)],
+)
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def root():
     return RedirectResponse(url="/docs")
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+app.include_router(health_router)

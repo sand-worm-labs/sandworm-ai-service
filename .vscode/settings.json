@@ -1,5 +1,4 @@
 {
-    "cSpell.words": [
-        "sandworm"
-    ]
+  "cSpell.words": ["sandworm"],
+  "python.defaultInterpreterPath": "${workspaceFolder}/apps/ai/.venv/bin/python"
 }

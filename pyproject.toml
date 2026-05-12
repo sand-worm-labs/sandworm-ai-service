@@ -10,13 +10,13 @@ package-mode = false
 [tool.poetry.dependencies]
 python = ">=3.12.*, <3.13"
 fastapi = "^0.135.2"
-uvicorn = {extras = ["standard"], version = "^0.42.0"}
+uvicorn = { extras = ["standard"], version = "^0.42.0" }
 python-dotenv = "^1.0.1"
 litellm = "^1.75.2"
 pydantic-settings = "^2.5.2"
 orjson = "^3.11.5"
 httpx = "^0.28.0"
-aiohttp = {extras = ["speedups"], version = "^3.13.4"}
+aiohttp = { extras = ["speedups"], version = "^3.13.4" }
 qdrant-client = "^1.17.1"
 
 [tool.poetry.group.dev.dependencies]
@@ -31,3 +31,10 @@ pytest-mock = "^3.14.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.mypy]
+namespace_packages = true
+explicit_package_bases = true

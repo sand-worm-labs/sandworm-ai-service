@@ -1,8 +1,8 @@
-GREEN := "\u{001b}[32m"
+GREEN  := "\u{001b}[32m"
 YELLOW := "\u{001b}[33m"
-RESET := "\u{001b}[0m"
+RESET  := "\u{001b}[0m"
 
-init dev='--dev':
+init:
     @if [ ! -f .env ]; then \
         echo "{{GREEN}}.env does not exist. Creating from example...{{RESET}}"; \
         cp .env.example .env; \

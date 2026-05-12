@@ -1,8 +1,8 @@
-GREEN := "\u{001b}[32m"
+GREEN  := "\u{001b}[32m"
 YELLOW := "\u{001b}[33m"
-RESET := "\u{001b}[0m"
+RESET  := "\u{001b}[0m"
 
-init dev='--dev':
+init:
     @if [ ! -f .env ]; then \
         echo "{{GREEN}}.env does not exist. Creating from example...{{RESET}}"; \
         cp .env.example .env; \
@@ -15,16 +15,16 @@ setup:
     poetry install --quiet
 
 dev: setup
-    poetry run uvicorn src.__main__:app --host 0.0.0.0 --port 8000 --reload
+    PYTHONPATH=. poetry run uvicorn src.__main__:app --host 0.0.0.0 --port 8000 --reload
 
-start:
-    poetry run python -m src.__main__
+start: setup
+    PYTHONPATH=. poetry run python -m src.__main__
 
 install:
     poetry install
 
 test:
-    poetry run pytest -s
+    PYTHONPATH=. poetry run pytest -s
 
 lint:
     poetry run ruff check .

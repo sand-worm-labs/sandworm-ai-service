@@ -10,27 +10,24 @@ init dev='--dev':
         echo "{{YELLOW}}.env already exists. Skipping creation.{{RESET}}"; \
     fi
 
-setup:
-    poetry env use python3.12
-    poetry install --quiet
-
-dev: setup
-    poetry run uvicorn src.__main__:app --host 0.0.0.0 --port 8000 --reload
+dev:
+    docker compose up --build
 
 start:
-    poetry run python -m src.__main__
+    docker compose up
 
-install:
-    poetry install
+install package:
+    docker compose run --rm ai pip install {{package}}
+    docker compose down
 
 test:
-    poetry run pytest -s
+    docker compose run --rm ai pytest -s
 
 lint:
-    poetry run ruff check .
+    docker compose run --rm ai ruff check .
 
 format:
-    poetry run ruff format .
+    docker compose run --rm ai ruff format .
 
 fix:
-    poetry run ruff check --fix .
+    docker compose run --rm ai ruff check --fix .

@@ -10,7 +10,11 @@ init dev='--dev':
         echo "{{YELLOW}}.env already exists. Skipping creation.{{RESET}}"; \
     fi
 
-dev:
+setup:
+    poetry env use python3.12
+    poetry install --quiet
+
+dev: setup
     poetry run uvicorn src.__main__:app --host 0.0.0.0 --port 8000 --reload
 
 start:

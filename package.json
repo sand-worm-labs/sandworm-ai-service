@@ -1,0 +1,11 @@
+{
+  "name": "@sandworm/ai",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "just dev"
+  },
+  "keywords": [],
+  "packageManager": "pnpm@10.17.0"
+}

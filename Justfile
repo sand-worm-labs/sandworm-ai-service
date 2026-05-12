@@ -15,8 +15,8 @@ setup:
     poetry install --quiet
 
 dev: setup
-    PYTHONPATH=. poetry run uvicorn src.__main__:app --host 0.0.0.0 --port 8000 --reload
-
+    PYTHONPATH=. poetry run uvicorn src.__main__:app --host 0.0.0.0 --port 8000 --reload --reload-exclude ".venv"
+    
 start: setup
     PYTHONPATH=. poetry run python -m src.__main__
 

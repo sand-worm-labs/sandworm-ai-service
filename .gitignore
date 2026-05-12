@@ -14,3 +14,5 @@ local_cache
 # ide
 .idea
 .vscode/
+
+.turbo/*

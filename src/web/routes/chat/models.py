@@ -19,6 +19,9 @@ class Conversation(BaseModel):
 
 class CreateConversationRequest(BaseModel):
     title: str = "New Conversation"
+    workspace_id: str
+    user_id: str
+    document_id: str
     openrouter_api_key: str
 
 
@@ -29,6 +32,9 @@ class UpdateConversationRequest(BaseModel):
 class CompletionRequest(BaseModel):
     messages: list[Message]
     model: str
+    workspace_id: str
+    user_id: str
+    document_id: str
     openrouter_api_key: str
     stream: bool = False
     temperature: float = 0.7
@@ -38,9 +44,11 @@ class CompletionRequest(BaseModel):
 class SendMessageRequest(BaseModel):
     content: str
     model: str
+    workspace_id: str
+    user_id: str
+    document_id: str
     openrouter_api_key: str
     stream: bool = False
-    temperature: float = 0.7
     max_tokens: int | None = None
 
 

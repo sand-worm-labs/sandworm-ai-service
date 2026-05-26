@@ -8,7 +8,7 @@
 #               May reference blocks above/below it.
 #
 #    GENERATE — block is being created during notebook generation.
-#               Role-aware: intro / step / summary / insight /
+#               Role-aware: intro / step / summary / insight / 
 #               caption / section_header / conclusion / standalone.
 #               Tone-aware: inherits notebook-level NotebookTone.
 #               Context-aware: knows what block type precedes/follows.

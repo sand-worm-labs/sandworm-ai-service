@@ -7,6 +7,7 @@ from src.web.middleware.auth import verify_handshake
 from src.web.routes.health.router import router as health_router
 from src.web.routes.chat.title import router as title_router
 from src.web.routes.chat.completions import router as completions_router
+from src.web.routes.document.title import router as document_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,6 +47,11 @@ app.include_router(
 app.include_router(
     title_router,
     prefix="/chat",
+    dependencies=[Depends(verify_handshake)],
+)
+app.include_router(
+    document_router,
+    prefix="/document",
     dependencies=[Depends(verify_handshake)],
 )
 

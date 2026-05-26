@@ -64,16 +64,6 @@ _DEFAULT_TONE = TitleTone.ANALYTICAL
 
 _FALLBACK_TITLES = [
     "Onchain Analysis",
-    "Wallet Activity Breakdown",
-    "DeFi Protocol Metrics",
-    "Token Flow Analysis",
-    "Smart Contract Interaction Patterns",
-    "Liquidity Pool Diagnostics",
-    "On-Chain Research Notebook",
-    "Blockchain Data Exploration",
-    "Protocol Revenue Attribution",
-    "Cross-Chain Activity Overview",
-    "MEV & Arbitrage Patterns",
 ]
 
 _SYSTEM_FROM_CONTENT = """\

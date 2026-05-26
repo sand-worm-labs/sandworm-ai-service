@@ -10,8 +10,6 @@
 from ..types import PromptContext
 
 
-# ─── SYSTEM DIRECTIVE ─────────────────────────────────────────────────
-
 def build_directive(ctx: PromptContext) -> str:
     return """\
 ## Task: Generate Visualization Code
@@ -35,8 +33,6 @@ matching the notebook theme — do not hardcode colors unless the user specifies
 - Add a descriptive title and axis labels — never leave them blank\
 """
 
-
-# ─── USER MESSAGE BUILDER ─────────────────────────────────────────────
 
 def build_user_generate(ctx: PromptContext) -> str:
     parts: list[str] = []

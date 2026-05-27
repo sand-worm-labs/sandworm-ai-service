@@ -8,6 +8,7 @@ from src.web.routes.health.router import router as health_router
 from src.web.routes.chat.title import router as title_router
 from src.web.routes.chat.completions import router as completions_router
 from src.web.routes.document.title import router as document_router
+from src.web.routes.intent.test_intent import router as intent_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -55,6 +56,11 @@ app.include_router(
     dependencies=[Depends(verify_handshake)],
 )
 
+app.include_router(
+    intent_router,
+    prefix="/intent",
+    dependencies=[Depends(verify_handshake)],
+)
 
 @app.get("/", include_in_schema=False)
 def root():

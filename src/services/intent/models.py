@@ -1,45 +1,40 @@
+from __future__ import annotations
+
 from typing import Any
-from pydantic import BaseModel
-from src.models.base import DocumentContext
+from pydantic import BaseModel, Field
+from src.models.base import BaseAiRequest, DocumentContext, Message
+
+
+class Address(BaseModel):
+    address: str
+    chain: str
+
+
+class Entity(BaseModel):
+    addresses: list[Address] = Field(default_factory=list)
+    protocol_names: list[str] = Field(default_factory=list)
+
+
+class SubGoal(BaseModel):
+    goal: str
+    feasible: bool
+    reason: str | None = None
 
 
 class Intent(BaseModel):
-    """Structured representation of a user's intent inside a document."""
-
     goal: str
-    """The action the user wants to perform.
-
-    Common values: ``summarize``, ``rewrite``, ``translate``, ``expand``,
-    ``shorten``, ``analyze``, ``explain``, ``extract``, ``format``,
-    ``generate``, ``compare``, ``search``, ``edit``, ``fix``.
-    """
-
-    entity: str
-    """The document fragment being acted on.
-
-    Common values: ``document``, ``paragraph``, ``selection``, ``heading``,
-    ``table``, ``code``, ``list``, ``sentence``, ``title``.
-    """
-
-    params: dict[str, Any] = {}
-    """Free-form key/value pairs extracted from the message.
-
-    Examples: ``{"language": "French"}``, ``{"tone": "formal"}``,
-    ``{"length": "short"}``, ``{"format": "bullet_points"}``.
-    """
+    entity: Entity
+    params: dict[str, Any] = Field(default_factory=dict)
+    sub_goals: list[SubGoal] = Field(default_factory=list)
 
 
-class ParseIntentRequest(BaseModel):
-    """Request body for ``POST /document/parse-intent``."""
+class Clarification(BaseModel):
+    question: str
+    recommendation: str
+    missing_param: str
 
-    message: str
-    openrouter_api_key: str
+
+class ParseIntentRequest(BaseAiRequest):
+    model: str
     context: DocumentContext
-    model: str = "anthropic/claude-haiku-4-5-20251001"
-
-
-class ParseIntentResponse(BaseModel):
-    """Response body returned by ``POST /document/parse-intent``."""
-
-    intent: Intent
-    context: DocumentContext
+    history: list[Message] = Field(default_factory=list)

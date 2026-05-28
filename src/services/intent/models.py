@@ -9,7 +9,6 @@ class Address(BaseModel):
     address: str
     chain: str
 
-
 class Entity(BaseModel):
     addresses: list[Address] = Field(default_factory=list)
     protocol_names: list[str] = Field(default_factory=list)

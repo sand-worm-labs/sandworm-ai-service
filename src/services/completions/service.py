@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from typing import AsyncIterator
+
 from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from .models import CompletionInput, CompletionOutput
+from .models import CompletionRequest
 
 
 class CompletionService:
-    async def stream(self, input: CompletionInput) -> AsyncIterator[str]:
-        llm = ChatOpenRouter(api_key=input.api_key, model=input.model, temperature=0, streaming=True)
+    async def stream(self, input: CompletionRequest) -> AsyncIterator[str]:
+        llm = ChatOpenRouter(api_key=input.openrouter_api_key, model=input.model, temperature=0, streaming=True)
 
         messages = [
             HumanMessage(content=m.content) if m.role == "user"

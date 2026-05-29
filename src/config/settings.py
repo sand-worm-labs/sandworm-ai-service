@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     AI_HANDSHAKE_TOKEN: str
     AI_OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    NEST_BASE_URL: str = "http://localhost:8081/api/"
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parent.parent.parent / ".env",
@@ -16,5 +17,9 @@ class Settings(BaseSettings):
     @property
     def openrouter_base_url(self) -> str:
         return self.AI_OPENROUTER_BASE_URL
+
+    @property
+    def nest_base_url(self) -> str:
+        return self.NEST_BASE_URL
 
 settings = Settings()

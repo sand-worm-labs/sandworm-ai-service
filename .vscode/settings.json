@@ -1,4 +1,9 @@
 {
-  "cSpell.words": ["sandworm"],
-  "python.defaultInterpreterPath": "${workspaceFolder}/apps/ai/.venv/bin/python"
+  "cSpell.words": [
+    "openrouter",
+    "sandworm"
+  ],
+  "python.defaultInterpreterPath": "${workspaceFolder}/apps/ai/.venv/bin/python",
+  "python-envs.defaultEnvManager": "ms-python.python:poetry",
+  "python-envs.defaultPackageManager": "ms-python.python:poetry"
 }

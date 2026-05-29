@@ -54,7 +54,7 @@ async def node_complete(state: PipelineState) -> PipelineState:
     if state.notebook_markdown:
         messages = [Message(role="system", content=f"<notebook>\n{state.notebook_markdown}\n</notebook>"), *messages]
 
-    input = CompletionRequest(messages=messages, model=state.model, openrouter_api_key=state.api_key)
+    input = CompletionRequest(messages=messages, model=state.model, openrouter_api_key=state.api_key, context=state.context)
     result = ""
     async for chunk in CompletionService().stream(input):
         result += chunk

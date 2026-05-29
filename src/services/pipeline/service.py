@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
+import json
+from dataclasses import dataclass, field
+from typing import Any, Literal
 
 from src.config.settings import settings
-from src.models.base import ChatContext, DocumentContext
+from src.models.base import ChatContext
 from src.services.completions.service import CompletionService
 from src.services.notebook_context.service import NotebookContextService
 from src.services.intent.service import ParseIntentService
@@ -20,6 +21,7 @@ class PipelineState:
     api_key: str
     context: ChatContext
     intent: dict[str, Any] | None = None
+    intent_status: Literal["clarify", "complete", "error"] | None = None
     notebook_markdown: str | None = None
     output: str | None = None
 
@@ -33,10 +35,16 @@ async def node_parse_intent(state: PipelineState) -> PipelineState:
         history=state.messages[:-1],
         context=state.context,
     )
-    result = ""
+    raw = ""
     async for chunk in ParseIntentService(req).stream():
-        result += chunk
-    state.intent = result
+        raw += chunk
+    try:
+        parsed = json.loads(raw)
+        state.intent = parsed
+        state.intent_status = parsed.get("status", "error")
+    except json.JSONDecodeError:
+        state.intent = {"status": "error", "detail": raw}
+        state.intent_status = "error"
     return state
 
 
@@ -64,6 +72,8 @@ async def node_complete(state: PipelineState) -> PipelineState:
 
 async def run_pipeline(state: PipelineState) -> PipelineState:
     state = await node_parse_intent(state)
+    if state.intent_status != "complete":
+        return state
     state = await node_fetch_context(state)
     state = await node_complete(state)
     return state

@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from src.services.pipeline.service import PipelineState, run_pipeline
@@ -18,6 +20,9 @@ async def completions_route(req: CompletionRequest) -> StreamingResponse:
     result = await run_pipeline(state)
 
     async def _stream():
-        yield result.output
+        if result.intent_status != "complete":
+            yield json.dumps(result.intent)
+        else:
+            yield result.output
 
     return StreamingResponse(_stream(), media_type="text/event-stream")

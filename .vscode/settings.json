@@ -1,4 +1,7 @@
 {
-  "cSpell.words": ["sandworm"],
+  "cSpell.words": [
+    "openrouter",
+    "sandworm"
+  ],
   "python.defaultInterpreterPath": "${workspaceFolder}/apps/ai/.venv/bin/python"
 }

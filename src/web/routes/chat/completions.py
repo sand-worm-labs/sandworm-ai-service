@@ -1,9 +1,14 @@
 from fastapi import APIRouter
-from src.web.routes.chat.models import CompletionRequest, CompletionResponse
-from src.services.completion import complete
+from fastapi.responses import StreamingResponse
+from src.services.completions.models import CompletionRequest
 
 router = APIRouter()
 
-@router.post("/completions", response_model=CompletionResponse)
+
+async def _stream_text(text: str):
+    yield text
+
+
+@router.post("/completions")
 async def completions_route(req: CompletionRequest):
-    return await complete(req)
+    return StreamingResponse(_stream_text("hello from completions"), media_type="text/event-stream")

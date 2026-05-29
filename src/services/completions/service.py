@@ -18,6 +18,9 @@ class CompletionService:
             for m in input.messages
         ]
 
+        if input.derived_context:
+            messages = [SystemMessage(content=input.derived_context), *messages]
+            
         async for chunk in llm.astream(messages):
             if chunk.content:
                 yield chunk.content

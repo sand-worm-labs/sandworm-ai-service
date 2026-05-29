@@ -8,13 +8,14 @@ class BaseContext(BaseModel):
     user_id: str
     workspace_id: str
     document_id: str
+    focused_block_ids: list[str] | None = None
+
 
 
 class ChatContext(BaseContext):
     """Extends base context with chat session id."""
 
-    chat_id: str | None = None
-
+    chat_id: str
 
 class DocumentContext(BaseContext):
     """Document-scoped context — no chat_id."""

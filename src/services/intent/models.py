@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 from pydantic import BaseModel, Field
-from src.models.base import BaseAiRequest, DocumentContext, Message
+from src.models.base import BaseAiRequest, ChatContext, DocumentContext, Message
 
 
 class Address(BaseModel):
@@ -35,5 +35,5 @@ class Clarification(BaseModel):
 
 class ParseIntentRequest(BaseAiRequest):
     model: str
-    context: DocumentContext
+    context: DocumentContext | ChatContext
     history: list[Message] = Field(default_factory=list)

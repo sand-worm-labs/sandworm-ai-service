@@ -4,8 +4,6 @@ from pydantic import BaseModel
 from src.models.base import ChatContext, Message
 
 class CompletionRequest(BaseModel):
-    """Request body for the /chat/completions endpoint."""
-
     messages: list[Message]
     model: str
     openrouter_api_key: str

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from src.web.routes.chat.models import TitleRequest, TitleResponse
-from src.services.title import generate_title
+from services.title.service import generate_title
 
 router = APIRouter()
 

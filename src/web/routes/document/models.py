@@ -3,6 +3,7 @@ from src.models.base import BaseAiRequest, DocumentContext
 
 
 class DocumentTitleRequest(BaseAiRequest):
+    model: str
     context: DocumentContext
 
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from src.web.routes.document.models import DocumentTitleRequest, DocumentTitleResponse
-from src.services.title.service import DocumentTitleService
+from src.services.document_title.service import DocumentTitleService
 
 router = APIRouter()
 

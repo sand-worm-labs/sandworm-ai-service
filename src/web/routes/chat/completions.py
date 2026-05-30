@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from src.services.pipeline.service import PipelineState, run_pipeline
@@ -16,8 +17,7 @@ async def completions_route(req: CompletionRequest) -> JSONResponse:
     )
     result = await run_pipeline(state)
     return JSONResponse(content={
-        "intent": result.intent,
-        "intent_status": result.intent_status,
+        "parsed_intent": asdict(result.parsed_intent) if result.parsed_intent else None,
         "block_plan": result.block_plan.model_dump() if result.block_plan else None,
         "notebook_markdown": result.notebook_markdown,
         "output": result.output,

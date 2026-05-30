@@ -70,7 +70,7 @@ async def node_parse_intent(state: PipelineState) -> PipelineState:
     return state
 
 
-async def node_fetch_context(state: PipelineState) -> PipelineState:
+async def node_fetch_notebook_context(state: PipelineState) -> PipelineState:
     ctx = AiContextRequest(
         document_id=state.context.document_id,
         workspace_id=state.context.workspace_id,
@@ -130,8 +130,8 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
     state = await node_parse_intent(state)
     if not state.parsed_intent.is_complete:
         return state
-    state = await node_fetch_context(state)
-    if state.parsed_intent.intent_class == IntentClass.ANALYTICAL:
+    state = await node_fetch_notebook_context(state)
+    if state.parsed_intent.intent_class in (IntentClass.ANALYTICAL, IntentClass.EDITORIAL):
         state = await node_plan_blocks(state)
     state = await node_complete(state)
     return state

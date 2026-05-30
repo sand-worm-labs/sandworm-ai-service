@@ -2,12 +2,24 @@ from __future__ import annotations
 
 import json
 import re
+import asyncio
 from typing import AsyncIterator
 
 from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-from .models import ParseIntentRequest
+from .models import IntentClass, ParseIntentRequest
+
+
+CLASSIFIER_PROMPT = """You are an intent classifier for a blockchain analytics notebook.
+
+Classify the user's message into exactly one of:
+- analytical: wants to query, analyze, or visualize onchain data
+- conversational: general question, concept explanation, no data operation
+- explanatory: wants to understand an existing block or piece of content
+- editorial: wants to modify, fix, extend, or delete an existing block
+
+Respond only with one word. No punctuation. No explanation."""
 
 
 SYSTEM_PROMPT = """You are a blockchain analytics intent parser for Sandworm.
@@ -56,7 +68,6 @@ Once satisfied, output ONLY:
 Raw JSON only. No markdown. No explanation."""
 
 
-
 class ParseIntentService:
     def __init__(self, req: ParseIntentRequest):
         self.llm = ChatOpenRouter(
@@ -67,25 +78,47 @@ class ParseIntentService:
         )
         self.req = req
 
+    async def _classify(self) -> IntentClass:
+        messages = [
+            SystemMessage(content=CLASSIFIER_PROMPT),
+            HumanMessage(content=self.req.message),
+        ]
+        result = ""
+        async for chunk in self.llm.astream(messages):
+            if chunk.content:
+                result += chunk.content
+        try:
+            return IntentClass(result.strip().lower())
+        except ValueError:
+            return IntentClass.ANALYTICAL
+
+    async def _parse(self) -> str:
+        messages = self._build_messages()
+        full = ""
+        async for chunk in self.llm.astream(messages):
+            if chunk.content:
+                full += chunk.content
+        return re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip())
+
     def _build_messages(self) -> list:
         messages = [SystemMessage(content=SYSTEM_PROMPT)]
-
         for turn in self.req.history:
             if turn.role == "user":
                 messages.append(HumanMessage(content=turn.content))
             elif turn.role == "assistant":
                 messages.append(AIMessage(content=turn.content))
-
         messages.append(HumanMessage(content=self.req.message))
         return messages
 
     async def stream(self) -> AsyncIterator[str]:
-        messages = self._build_messages()
         try:
-            full = ""
-            async for chunk in self.llm.astream(messages):
-                if chunk.content:
-                    full += chunk.content
-            yield re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip())
+            intent_class, parsed = await asyncio.gather(
+                self._classify(),
+                self._parse(),
+            )
+            yield json.dumps({
+                "intent_class": intent_class.value,
+                **json.loads(parsed),
+            })
         except Exception as exc:
             yield json.dumps({"status": "error", "detail": str(exc)})

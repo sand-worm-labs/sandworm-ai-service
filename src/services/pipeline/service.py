@@ -68,6 +68,7 @@ async def node_fetch_context(state: PipelineState) -> PipelineState:
     ctx = AiContextRequest(
         document_id=state.context.document_id,
         workspace_id=state.context.workspace_id,
+        focused_block_ids= state.context.focused_block_ids
     )
     state.notebook_markdown = await NotebookContextService(settings.nest_base_url).fetch(ctx)
     return state
@@ -87,7 +88,6 @@ async def node_complete(state: PipelineState) -> PipelineState:
 
 
 async def run_pipeline(state: PipelineState) -> PipelineState:
-    state = await node_plan_blocks(state) 
     state = await node_parse_intent(state)
     if state.intent_status != "complete":
         return state

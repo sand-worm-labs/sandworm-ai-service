@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any
 from pydantic import BaseModel, Field
 from src.models.base import BaseAiRequest, ChatContext, DocumentContext, Message
@@ -37,3 +38,9 @@ class ParseIntentRequest(BaseAiRequest):
     model: str
     context: DocumentContext | ChatContext
     history: list[Message] = Field(default_factory=list)
+
+class IntentClass(str, Enum):
+    ANALYTICAL   = "analytical"
+    CONVERSATIONAL = "conversational"
+    EXPLANATORY  = "explanatory"  
+    EDITORIAL    = "editorial"    

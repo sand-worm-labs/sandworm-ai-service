@@ -1,9 +1,10 @@
 from fastapi import APIRouter
-from src.web.routes.chat.models import TitleRequest, TitleResponse
-from src.services.title import generate_title
+from src.services.chat_title.service import ChatTitleService
+from src.services.completions.models import CompletionRequest
 
 router = APIRouter()
 
-@router.post("/title", response_model=TitleResponse)
-async def title_route(req: TitleRequest):
-    return await generate_title(req)
+@router.post("/title")
+async def title_route(req: CompletionRequest):
+    title = await ChatTitleService(req).generate()
+    return {"title": title}

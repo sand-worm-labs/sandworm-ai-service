@@ -2,12 +2,34 @@ from __future__ import annotations
 
 import json
 import re
+import asyncio
 from typing import AsyncIterator
 
 from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-from .models import ParseIntentRequest
+from .models import IntentClass, ParseIntentRequest, ParsedIntent
+
+
+CLASSIFIER_PROMPT = """Classify a user prompt for a blockchain analytics notebook.
+
+Output: <class>|<references_block>
+
+Classes:
+- analytical: query, analyze, or visualize onchain data
+- conversational: general question, no data operation
+- explanatory: understand an existing block or concept
+- editorial: modify, fix, extend, or delete an existing block
+
+references_block = yes if the prompt references anything pre-existing — explicit ("block 2", "that query"), vague ("it", "this", "here", "that"), or implied ("add a filter", "break it down", "do it for X too"). Otherwise no.
+
+Examples:
+analytical|no
+editorial|yes
+analytical|yes
+conversational|no
+
+One line. No explanation."""
 
 
 SYSTEM_PROMPT = """You are a blockchain analytics intent parser for Sandworm.
@@ -48,13 +70,14 @@ Additional rules:
 For each sub_goal mark feasible: false only if it provably requires off-chain data.
 
 While clarifying, output ONLY:
-{"status":"clarify","question":"...","recommendation":"...","missing_param":"..."}
+{"status":"clarify","question":"...","recommendation":"...","missing_param":"...","options":[{"label":"...","value":"..."}]}
+
+Include options when the answer space is bounded (chain, scope, analysis type). Omit options array when answer requires free input (address, date, protocol name).
 
 Once satisfied, output ONLY:
 {"status":"complete","intent":{"goal":"...","entity":{"addresses":[{"address":"0x...","chain":"ethereum"}],"protocol_names":["Uniswap"]},"params":{},"sub_goals":[{"goal":"snake_case_goal","feasible":true,"reason":null}]}}
 
 Raw JSON only. No markdown. No explanation."""
-
 
 
 class ParseIntentService:
@@ -67,25 +90,75 @@ class ParseIntentService:
         )
         self.req = req
 
+    async def _classify(self) -> tuple[IntentClass, bool]:
+        messages = [
+            SystemMessage(content=CLASSIFIER_PROMPT),
+            HumanMessage(content=self.req.message),
+        ]
+        result = ""
+        async for chunk in self.llm.astream(messages):
+            if chunk.content:
+                result += chunk.content
+
+        parts = result.strip().lower().split("|")
+        try:
+            intent_class = IntentClass(parts[0].strip())
+        except ValueError:
+            intent_class = IntentClass.ANALYTICAL
+
+        references_block = len(parts) > 1 and parts[1].strip() == "yes"
+        return intent_class, references_block
+
+    async def _parse(self) -> str:
+        messages = self._build_messages()
+        full = ""
+        async for chunk in self.llm.astream(messages):
+            if chunk.content:
+                full += chunk.content
+        return re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip())
+
     def _build_messages(self) -> list:
         messages = [SystemMessage(content=SYSTEM_PROMPT)]
-
         for turn in self.req.history:
             if turn.role == "user":
                 messages.append(HumanMessage(content=turn.content))
             elif turn.role == "assistant":
                 messages.append(AIMessage(content=turn.content))
-
         messages.append(HumanMessage(content=self.req.message))
         return messages
 
     async def stream(self) -> AsyncIterator[str]:
-        messages = self._build_messages()
         try:
-            full = ""
-            async for chunk in self.llm.astream(messages):
-                if chunk.content:
-                    full += chunk.content
-            yield re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip())
+            (intent_class, references_block), parsed = await asyncio.gather(
+                self._classify(),
+                self._parse(),
+            )
+
+            data = json.loads(parsed)
+            status = data.get("status", "error")
+
+            result = ParsedIntent(
+                intent_class=intent_class,
+                intent_status=status,
+                intent=data.get("intent"),
+            )
+
+            payload: dict = {
+                "intent_class": result.intent_class.value,
+                "intent_status": result.intent_status,
+                "references_block": references_block,
+            }
+
+            if status == "complete":
+                payload["intent"] = result.intent
+
+            if status == "clarify":
+                payload["question"]       = data.get("question")
+                payload["recommendation"] = data.get("recommendation")
+                payload["missing_param"]  = data.get("missing_param")
+                payload["options"]        = data.get("options", [])
+
+            yield json.dumps(payload)
+
         except Exception as exc:
             yield json.dumps({"status": "error", "detail": str(exc)})

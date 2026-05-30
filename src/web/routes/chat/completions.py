@@ -1,7 +1,5 @@
-import json
-
 from fastapi import APIRouter
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 from src.services.pipeline.service import PipelineState, run_pipeline
 from src.services.completions.models import CompletionRequest
 
@@ -9,16 +7,18 @@ router = APIRouter()
 
 
 @router.post("/completions")
-async def completions_route(req: CompletionRequest) -> StreamingResponse:
+async def completions_route(req: CompletionRequest) -> JSONResponse:
     state = PipelineState(
         messages=req.messages,
         model=req.model,
         api_key=req.openrouter_api_key,
         context=req.context,
     )
-
-    async def _stream():
-        async for part in run_pipeline(state):
-            yield json.dumps(part) + "\n"
-
-    return StreamingResponse(_stream(), media_type="text/event-stream")
+    result = await run_pipeline(state)
+    return JSONResponse(content={
+        "intent": result.intent,
+        "intent_status": result.intent_status,
+        "block_plan": result.block_plan.model_dump() if result.block_plan else None,
+        "notebook_markdown": result.notebook_markdown,
+        "output": result.output,
+    })

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-from typing import AsyncIterator
 
 from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -60,20 +59,14 @@ class PlanBlocksService:
             api_key=req.openrouter_api_key,
             model=req.model,
             temperature=0,
-            streaming=True,
         )
         self.req = req
 
-    def _messages(self) -> list:
-        return [
+    async def plan(self) -> BlockPlan:
+        messages = [
             SystemMessage(content=SYSTEM_PROMPT),
             HumanMessage(content=_intent_summary(self.req)),
         ]
-
-    async def stream(self) -> AsyncIterator[str]:
-        try:
-            async for chunk in self.llm.astream(self._messages()):
-                if chunk.content:
-                    yield chunk.content
-        except Exception as exc:
-            yield json.dumps({"status": "error", "detail": str(exc)})
+        response = await self.llm.ainvoke(messages)
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.content.strip())
+        return BlockPlan.model_validate(json.loads(raw))

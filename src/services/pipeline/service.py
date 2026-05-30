@@ -86,17 +86,11 @@ async def node_complete(state: PipelineState) -> PipelineState:
     return state
 
 
-async def run_pipeline(state: PipelineState):
+async def run_pipeline(state: PipelineState) -> PipelineState:
+    state = await node_plan_blocks(state) 
     state = await node_parse_intent(state)
     if state.intent_status != "complete":
-        return
-    intent = Intent.model_validate(state.intent["intent"])
-    plan_req = PlanBlocksRequest(
-        message="",
-        model=state.model,
-        openrouter_api_key=state.api_key,
-        intent=intent,
-        context=state.context,
-    )
-    async for chunk in PlanBlocksService(plan_req).stream():
-        yield chunk
+        return state
+    state = await node_fetch_context(state)
+    state = await node_complete(state)
+    return state

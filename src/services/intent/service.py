@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-import asyncio
 from typing import AsyncIterator
 
 from langchain_openrouter import ChatOpenRouter
@@ -11,73 +10,85 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from .models import IntentClass, ParseIntentRequest, ParsedIntent
 
 
-CLASSIFIER_PROMPT = """Classify a user prompt for a blockchain analytics notebook.
+CLASSIFIER_PROMPT = """Blockchain analytics notebook intent classifier.
 
 Output: <class>|<references_block>
 
-Classes:
-- analytical: query, analyze, or visualize onchain data
-- conversational: general question, no data operation
-- explanatory: understand an existing block or concept
-- editorial: modify, fix, extend, or delete an existing block
+Classes: analytical|conversational|explanatory|editorial
+- analytical: new queries/analysis/viz
+- editorial: modify/fix/optimize existing (default when unsure)
+- explanatory: explain existing block or concept
+- conversational: general question, no data op
 
-references_block = yes if the prompt references anything pre-existing — explicit ("block 2", "that query"), vague ("it", "this", "here", "that"), or implied ("add a filter", "break it down", "do it for X too"). Otherwise no.
+"block" = notebook cell if: "this block","block 2","that query","it" → references_block=yes
+"block" = onchain if: "block 18500000","0xabc..." → analytical, references_block=no
 
-Examples:
-analytical|no
-editorial|yes
-analytical|yes
-conversational|no
+references_block=yes if references existing notebook cell.
 
-One line. No explanation."""
+analytical|no / editorial|yes / analytical|yes / conversational|no
+
+One line only."""
 
 
-SYSTEM_PROMPT = """You are a blockchain analytics intent parser for Sandworm.
+SYSTEM_PROMPT = """Blockchain analytics intent parser for Sandworm.
 
-Interview the user relentlessly about their analytics request until you reach a shared understanding. Walk down each branch of the decision tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer. Ask ONE question at a time.
+Scan history first — never re-ask established params. Infer when possible.
 
-Before asking any question, ask yourself: "Would two different answers to this question produce two meaningfully different SQL queries?" If yes — ask it. If no — infer the most useful interpretation and output complete.
+NON-NEGOTIABLES (resolve in order):
+1. No address + no protocol → ask for one
+2. EVM address (0x...) + no chain → ask chain
+3. Multiple addresses, no chain → ask each
 
-NON-NEGOTIABLES — always resolve these first:
-1. No address AND no protocol_name present
-2. An EVM address is given with no chain
+Address rules:
+- 0x... no chain → ask chain
+- ENS (x.eth) → chain=ethereum, no ask
+- Named entity → ask for explicit address
+- Chain established in history → apply, never re-ask
 
-Once non-negotiables are met, go deeper — ask about things that would change the shape of the analysis:
-- Is this wallet-level or collection-level?
-- Is this a comparison or a single entity analysis?
-- Is there a specific event or date anchor driving this?
-- Are there multiple chains involved?
+Deeper (after non-negotiables):
+- Wallet-level or collection-level?
+- Comparison or single entity?
+- Event/date anchor?
+- Multi-chain: unified or separate? (default: unified)
 
-DO NOT ask about:
-- Timeframe precision — "this month", "last 7 days", "last 30 days", "this quarter", "this year", "last 6 months", "right now", "today" are fully specified, never clarify time
-- Sub-entity selection (which pool, which token pair, which LP) — default to all
-- Analysis methodology or metric preferences
-- Anything with a sensible default
+NEVER ask: timeframe precision, sub-entity selection, methodology, sensible defaults.
 
-Additional rules:
-- Vague protocol name (e.g. "V3", "the exchange") → ask which protocol
-- EVM address with no chain → ask which chain
-- Wallet-required goals ("analyze my portfolio", "track this whale") with no address → ask for it
-- Collection-level goals (wash trading, floor price, volume, TVL) do NOT need a wallet upfront
-- Protocol name + chain = sufficient, do NOT ask for a contract address
-- CEX names (Binance, Coinbase) → flag and clarify intent
-- Token and protocol share same name (e.g. "USDC") → ask which they mean
-- ENS names pass through as-is in the address field with their stated chain
-- If the goal spans multiple chains → ask if this is one unified cross-chain analysis or two separate analyses. Recommendation: unified
-- If a relative event is used as a time anchor ("after the exploit", "after the launch", "after the pump") with no date → ask for the specific date or block number
-- If the user says "full report", "deep dive", or "complete analysis" → set params.output_scope: "full". If they say "quick", "summary", or "overview" → set params.output_scope: "summary". Default: "full". Do not ask — infer from language.
+Other rules:
+- Vague protocol → ask which
+- CEX name → flag + clarify
+- Token=protocol name (e.g. USDC) → ask which
+- Relative time anchor → ask date/block number
+- "full report/deep dive" → output_scope=full; "quick/summary" → output_scope=summary; default=full
 
-For each sub_goal mark feasible: false only if it provably requires off-chain data.
+sub_goals: feasible=false only if provably requires off-chain data.
+Batch ALL questions into ONE follow_up. Never clarify twice.
 
-While clarifying, output ONLY:
-{"status":"clarify","question":"...","recommendation":"...","missing_param":"...","options":[{"label":"...","value":"..."}]}
+CLARIFY:
+{"status":"clarify","type":"follow_up","message":"...","questions":[{"id":"...","text":"...","input_type":"radio|text|select","options":[{"label":"...","value":"..."}],"placeholder":"...","required":true}]}
 
-Include options when the answer space is bounded (chain, scope, analysis type). Omit options array when answer requires free input (address, date, protocol name).
+radio/select = bounded. text = free input. Omit options for text.
 
-Once satisfied, output ONLY:
-{"status":"complete","intent":{"goal":"...","entity":{"addresses":[{"address":"0x...","chain":"ethereum"}],"protocol_names":["Uniswap"]},"params":{},"sub_goals":[{"goal":"snake_case_goal","feasible":true,"reason":null}]}}
+COMPLETE:
+{"status":"complete","intent":{"goal":"...","entity":{"addresses":[{"address":"0x...","chain":"ethereum"}],"protocol_names":[]},"params":{},"sub_goals":[{"goal":"...","feasible":true,"reason":null}]}}
 
-Raw JSON only. No markdown. No explanation."""
+JSON only. No markdown."""
+
+
+SYSTEM_PROMPTS: dict[IntentClass, str] = {
+    IntentClass.ANALYTICAL: SYSTEM_PROMPT,
+
+    IntentClass.EDITORIAL: """Notebook intent parser. User wants to edit a block.
+Output ONLY: {"status":"complete","intent":{"goal":"<snake_case>","target":"<ref or null>","instruction":"<verbatim>"}}
+JSON only. No questions.""",
+
+    IntentClass.EXPLANATORY: """Notebook intent parser. User wants an explanation.
+Output ONLY: {"status":"complete","intent":{"goal":"explain","target":"<what or null>","question":"<verbatim>"}}
+JSON only. No questions.""",
+
+    IntentClass.CONVERSATIONAL: """Notebook assistant. Answer directly.
+Output ONLY: {"status":"complete","intent":{"goal":"answer","question":"<verbatim>"}}
+JSON only.""",
+}
 
 
 class ParseIntentService:
@@ -91,12 +102,11 @@ class ParseIntentService:
         self.req = req
 
     async def _classify(self) -> tuple[IntentClass, bool]:
-        messages = [
+        result = ""
+        async for chunk in self.llm.astream([
             SystemMessage(content=CLASSIFIER_PROMPT),
             HumanMessage(content=self.req.message),
-        ]
-        result = ""
-        async for chunk in self.llm.astream(messages):
+        ]):
             if chunk.content:
                 result += chunk.content
 
@@ -106,57 +116,93 @@ class ParseIntentService:
         except ValueError:
             intent_class = IntentClass.ANALYTICAL
 
-        references_block = len(parts) > 1 and parts[1].strip() == "yes"
-        return intent_class, references_block
+        return intent_class, len(parts) > 1 and parts[1].strip() == "yes"
 
-    async def _parse(self) -> str:
-        messages = self._build_messages()
-        full = ""
-        async for chunk in self.llm.astream(messages):
-            if chunk.content:
-                full += chunk.content
-        return re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip())
-
-    def _build_messages(self) -> list:
-        messages = [SystemMessage(content=SYSTEM_PROMPT)]
+    async def _parse(self, intent_class: IntentClass) -> str:
+        prompt = SYSTEM_PROMPTS.get(intent_class, SYSTEM_PROMPT)
+        messages = [SystemMessage(content=prompt)]
         for turn in self.req.history:
             if turn.role == "user":
                 messages.append(HumanMessage(content=turn.content))
             elif turn.role == "assistant":
                 messages.append(AIMessage(content=turn.content))
         messages.append(HumanMessage(content=self.req.message))
-        return messages
+
+        full = ""
+        async for chunk in self.llm.astream(messages):
+            if chunk.content:
+                full += chunk.content
+        return re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip())
+
+    def _is_followup_clarification(self) -> bool:
+        for turn in reversed(self.req.history):
+            if turn.role == "assistant":
+                try:
+                    data = json.loads(turn.content)
+                    if "intent_status" in data:
+                        return data["intent_status"] == "clarify"
+                except (json.JSONDecodeError, ValueError):
+                    continue
+        return False
+
+    def _intent_class_from_history(self) -> IntentClass:
+        for turn in reversed(self.req.history):
+            if turn.role == "assistant":
+                try:
+                    data = json.loads(turn.content)
+                    if "intent_class" in data:
+                        return IntentClass(data["intent_class"])
+                except (json.JSONDecodeError, ValueError):
+                    continue
+        return IntentClass.ANALYTICAL
+
+    def _references_block_from_history(self) -> bool:
+        for turn in reversed(self.req.history):
+            if turn.role == "assistant":
+                try:
+                    data = json.loads(turn.content)
+                    if "references_block" in data:
+                        return bool(data["references_block"])
+                except (json.JSONDecodeError, ValueError):
+                    continue
+        return False
 
     async def stream(self) -> AsyncIterator[str]:
         try:
-            (intent_class, references_block), parsed = await asyncio.gather(
-                self._classify(),
-                self._parse(),
-            )
+            is_first    = len(self.req.history) == 0
+            is_followup = self._is_followup_clarification()
 
-            data = json.loads(parsed)
+            if is_first or not is_followup:
+                intent_class, references_block = await self._classify()
+            else:
+                intent_class     = self._intent_class_from_history()
+                references_block = self._references_block_from_history()
+
+            if intent_class != IntentClass.ANALYTICAL:
+                parsed       = await self._parse(intent_class)
+                data         = json.loads(parsed)
+                yield json.dumps({
+                    "intent_class":     intent_class.value,
+                    "intent_status":    "complete",
+                    "references_block": references_block,
+                    "intent":           data.get("intent"),
+                })
+                return
+
+            data   = json.loads(await self._parse(intent_class))
             status = data.get("status", "error")
 
-            result = ParsedIntent(
-                intent_class=intent_class,
-                intent_status=status,
-                intent=data.get("intent"),
-            )
-
             payload: dict = {
-                "intent_class": result.intent_class.value,
-                "intent_status": result.intent_status,
+                "intent_class":     intent_class.value,
+                "intent_status":    status,
                 "references_block": references_block,
             }
 
             if status == "complete":
-                payload["intent"] = result.intent
-
-            if status == "clarify":
-                payload["question"]       = data.get("question")
-                payload["recommendation"] = data.get("recommendation")
-                payload["missing_param"]  = data.get("missing_param")
-                payload["options"]        = data.get("options", [])
+                payload["intent"] = data.get("intent")
+            elif status == "clarify":
+                payload["message"]   = data.get("message")
+                payload["questions"] = data.get("questions", [])
 
             yield json.dumps(payload)
 

@@ -1,14 +1,9 @@
-from pydantic import BaseModel
-from src.models.base import DocumentContext
+from src.models.base import BaseEditRequest, BaseCodeResponse
 
 
-class EditMarkdownRequest(BaseModel):
-    prompt: str
-    openrouter_api_key: str
-    model: str
-    context: DocumentContext
+class EditMarkdownRequest(BaseEditRequest):
+    pass
 
 
-class MarkdownResponse(BaseModel):
-    content: str
-    context: DocumentContext
+class MarkdownResponse(BaseCodeResponse):
+    pass

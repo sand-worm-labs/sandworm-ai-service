@@ -1,21 +1,13 @@
-from pydantic import BaseModel
-from src.models.base import DocumentContext
+from src.models.base import BaseCodeResponse, BaseEditRequest, BaseFixRequest
 
 
-class EditSqlRequest(BaseModel):
-    prompt: str
-    openrouter_api_key: str
-    model: str
-    context: DocumentContext
+class EditSqlRequest(BaseEditRequest):
+    pass
 
 
-class FixSqlRequest(BaseModel):
-    error_message: str
-    openrouter_api_key: str
-    model: str
-    context: DocumentContext
+class FixSqlRequest(BaseFixRequest):
+    pass
 
 
-class SqlResponse(BaseModel):
-    code: str
-    context: DocumentContext
+class SqlResponse(BaseCodeResponse):
+    pass

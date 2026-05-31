@@ -28,6 +28,25 @@ class BaseAiRequest(BaseModel):
     openrouter_api_key: str
 
 
+class BaseEditRequest(BaseModel):
+    prompt: str
+    openrouter_api_key: str
+    model: str
+    context: DocumentContext
+
+
+class BaseFixRequest(BaseModel):
+    error_message: str
+    openrouter_api_key: str
+    model: str
+    context: DocumentContext
+
+
+class BaseCodeResponse(BaseModel):
+    code: str
+    context: DocumentContext
+
+
 class Message(BaseModel):
     """A single turn in a conversation thread."""
 

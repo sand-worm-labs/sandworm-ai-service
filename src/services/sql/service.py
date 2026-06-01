@@ -1,0 +1,34 @@
+from __future__ import annotations
+
+from langchain_openrouter import ChatOpenRouter
+from langchain_core.messages import SystemMessage, HumanMessage
+
+from src.web.routes.sql.models import EditSqlRequest, FixSqlRequest
+
+
+EDIT_SYSTEM_PROMPT = """You are an expert SQL data analyst.
+Edit the provided SQL query according to the user's instructions.
+Return only the raw SQL with no explanations, no markdown fences, and no extra text."""
+
+FIX_SYSTEM_PROMPT = """You are an expert SQL data analyst.
+Fix the SQL query based on the error message provided.
+Return only the corrected raw SQL with no explanations, no markdown fences, and no extra text."""
+
+
+class SqlService:
+    def __init__(self, api_key: str, model: str) -> None:
+        self.llm = ChatOpenRouter(api_key=api_key, model=model, temperature=0)
+
+    async def edit(self, req: EditSqlRequest) -> str:
+        res = await self.llm.ainvoke([
+            SystemMessage(content=EDIT_SYSTEM_PROMPT),
+            HumanMessage(content=req.prompt),
+        ])
+        return res.content.strip()
+
+    async def fix(self, req: FixSqlRequest) -> str:
+        res = await self.llm.ainvoke([
+            SystemMessage(content=FIX_SYSTEM_PROMPT),
+            HumanMessage(content=req.error_message),
+        ])
+        return res.content.strip()

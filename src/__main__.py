@@ -9,6 +9,9 @@ from src.web.routes.chat.title import router as chat_title_router
 from src.web.routes.chat.completions import router as completions_router
 from src.web.routes.document.title import router as document_title_router
 from src.web.routes.intent.test_intent import router as intent_router
+from src.web.routes.code.router import router as code_router
+from src.web.routes.sql.router import router as sql_router
+from src.web.routes.markdown.router import router as markdown_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,6 +62,24 @@ app.include_router(
 app.include_router(
     intent_router,
     prefix="/intent",
+    dependencies=[Depends(verify_handshake)],
+)
+
+app.include_router(
+    code_router,
+    prefix="/code",
+    dependencies=[Depends(verify_handshake)],
+)
+
+app.include_router(
+    sql_router,
+    prefix="/sql",
+    dependencies=[Depends(verify_handshake)],
+)
+
+app.include_router(
+    markdown_router,
+    prefix="/markdown",
     dependencies=[Depends(verify_handshake)],
 )
 

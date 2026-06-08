@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Literal
 
 from src.config.settings import settings
 from src.models.base import ChatContext
@@ -14,6 +13,8 @@ from src.services.intent.service import ParseIntentService
 from src.services.intent.models import ParseIntentRequest, Intent, IntentClass, ParsedIntent
 from src.services.block_planner.service import PlanBlocksService
 from src.services.block_planner.models import PlanBlocksRequest, BlockPlan
+from src.services.block_action.service import BlockActionService
+from src.services.block_action.model import GeneratedBlock
 
 
 @dataclass
@@ -24,6 +25,7 @@ class PipelineState:
     context: ChatContext
     parsed_intent: ParsedIntent | None = None
     block_plan: BlockPlan | None = None
+    generated_blocks: list[GeneratedBlock] | None = None
     notebook_markdown: str | None = None
     output: str | None = None
 
@@ -102,6 +104,13 @@ async def node_plan_blocks(state: PipelineState) -> PipelineState:
     return state
 
 
+async def node_generate_blocks(state: PipelineState) -> PipelineState:
+    intent = Intent.model_validate(state.parsed_intent.intent)
+    service = BlockActionService(api_key=state.api_key, model=state.model)
+    state.generated_blocks = await service.generate_blocks(state.block_plan, intent)
+    return state
+
+
 async def node_complete(state: PipelineState) -> PipelineState:
     messages = state.messages
 
@@ -133,5 +142,6 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
     state = await node_fetch_notebook_context(state)
     if state.parsed_intent.intent_class in (IntentClass.ANALYTICAL, IntentClass.EDITORIAL):
         state = await node_plan_blocks(state)
+        state = await node_generate_blocks(state)
     state = await node_complete(state)
     return state

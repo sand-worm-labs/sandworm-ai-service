@@ -19,6 +19,7 @@ async def completions_route(req: CompletionRequest) -> JSONResponse:
     return JSONResponse(content={
         "parsed_intent": asdict(result.parsed_intent) if result.parsed_intent else None,
         "block_plan": result.block_plan.model_dump() if result.block_plan else None,
+        "generated_blocks": [b.model_dump() for b in result.generated_blocks] if result.generated_blocks else None,
         "notebook_markdown": result.notebook_markdown,
         "output": result.output,
     })

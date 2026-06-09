@@ -4,7 +4,7 @@ import re
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
-from src.util.cache import get_cached, make_llm_cache_key, set_cached
+from src.util.cache import get_cached, make_llm_cache_key, publish_job_event, set_cached
 
 from src.services.block_planner.models import BlockPlan, PlannedBlock
 from src.services.intent.models import Intent
@@ -65,13 +65,15 @@ def _user_message(
 
 
 class BlockActionService:
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: str, model: str, job_id: str | None = None):
         self.llm = make_llm(api_key, model)
+        self.job_id = job_id
 
     async def generate_blocks(self, plan: BlockPlan, intent: Intent) -> list[GeneratedBlock]:
         generated: list[GeneratedBlock] = []
+        total = len(plan.blocks)
 
-        for block in plan.blocks:
+        for index, block in enumerate(plan.blocks):
             system = _SYSTEM[block.type]
             user = _user_message(block, intent, generated)
 
@@ -81,12 +83,21 @@ class BlockActionService:
             ])
             content = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", response.content.strip())
 
-            generated.append(GeneratedBlock(
+            generated_block = GeneratedBlock(
                 type=block.type,
                 title=block.title,
                 description=block.description,
                 content=content,
                 depends_on=block.depends_on,
-            ))
+            )
+            generated.append(generated_block)
+
+            if self.job_id:
+                await publish_job_event(self.job_id, {
+                    "type": "block_ready",
+                    "index": index,
+                    "total": total,
+                    "block": generated_block.model_dump(),
+                })
 
         return generated

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from src.config.settings import settings
 from src.models.base import ChatContext
+from src.util.cache import clear_active_job, publish_job_event
 from src.services.completions.service import CompletionService
 from src.services.completions.models import CompletionRequest, Message
 from src.services.notebook_context.service import NotebookContextService
@@ -49,6 +50,7 @@ async def node_parse_intent(state: PipelineState) -> PipelineState:
         openrouter_api_key=state.api_key,
         history=state.messages[:-1],
         context=state.context,
+        job_id=state.job_id,
     )
 
     raw = ""
@@ -108,7 +110,7 @@ async def node_plan_blocks(state: PipelineState) -> PipelineState:
 
 async def node_generate_blocks(state: PipelineState) -> PipelineState:
     intent = Intent.model_validate(state.parsed_intent.intent)
-    service = BlockActionService(api_key=state.api_key, model=state.model)
+    service = BlockActionService(api_key=state.api_key, model=state.model, job_id=state.job_id)
     state.generated_blocks = await service.generate_blocks(state.block_plan, intent)
     return state
 
@@ -138,12 +140,38 @@ async def node_complete(state: PipelineState) -> PipelineState:
 
 
 async def run_pipeline(state: PipelineState) -> PipelineState:
-    state = await node_parse_intent(state)
-    if not state.parsed_intent.is_complete:
+    job_id = state.job_id
+    try:
+        await publish_job_event(job_id, {"type": "started"})
+
+        state = await node_parse_intent(state)
+        await publish_job_event(job_id, {
+            "type": "intent_parsed",
+            "intent_class": state.parsed_intent.intent_class.value,
+            "intent_status": state.parsed_intent.intent_status,
+        })
+        if not state.parsed_intent.is_complete:
+            return state
+
+        state = await node_fetch_notebook_context(state)
+        await publish_job_event(job_id, {"type": "context_fetched"})
+
+        if state.parsed_intent.intent_class in (IntentClass.ANALYTICAL, IntentClass.EDITORIAL):
+            state = await node_plan_blocks(state)
+            await publish_job_event(job_id, {
+                "type": "plan_ready",
+                "blocks": [{"type": b.type, "title": b.title} for b in state.block_plan.blocks],
+            })
+
+            state = await node_generate_blocks(state)
+
+        state = await node_complete(state)
+        await publish_job_event(job_id, {"type": "completed", "output": state.output})
         return state
-    state = await node_fetch_notebook_context(state)
-    if state.parsed_intent.intent_class in (IntentClass.ANALYTICAL, IntentClass.EDITORIAL):
-        state = await node_plan_blocks(state)
-        state = await node_generate_blocks(state)
-    state = await node_complete(state)
-    return state
+
+    except Exception as exc:
+        await publish_job_event(job_id, {"type": "error", "detail": str(exc)})
+        raise
+    finally:
+        if isinstance(state.context, ChatContext):
+            await clear_active_job(state.context.chat_id)

@@ -48,6 +48,7 @@ class ParseIntentRequest(BaseAiRequest):
     model: str
     context: DocumentContext | ChatContext
     history: list[Message] = Field(default_factory=list)
+    job_id: str | None = None
 
 
 class IntentClass(str, Enum):

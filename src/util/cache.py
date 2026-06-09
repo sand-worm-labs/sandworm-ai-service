@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+from typing import Any
 
 import redis.asyncio as aioredis
 
@@ -38,3 +40,27 @@ async def get_cached(key: str) -> str | None:
 
 async def set_cached(key: str, value: str, ttl: int = LLM_CACHE_TTL) -> None:
     await _client_or_raise().set(key, value, ex=ttl)
+
+
+ACTIVE_JOB_TTL = 60 * 5   # 5 minutes — safety expiry if pipeline crashes
+JOB_EVENT_TTL  = 60 * 60  # 1 hour
+
+
+async def get_active_job(chat_id: str) -> str | None:
+    return await _client_or_raise().get(f"active_job:{chat_id}")
+
+
+async def set_active_job(chat_id: str, job_id: str) -> None:
+    await _client_or_raise().set(f"active_job:{chat_id}", job_id, ex=ACTIVE_JOB_TTL)
+
+
+async def clear_active_job(chat_id: str) -> None:
+    await _client_or_raise().delete(f"active_job:{chat_id}")
+
+
+async def publish_job_event(job_id: str, event: dict[str, Any]) -> None:
+    client = _client_or_raise()
+    payload = json.dumps(event)
+    key = f"job:{job_id}:event"
+    await client.set(key, payload, ex=JOB_EVENT_TTL)
+    await client.publish(f"job:{job_id}", payload)

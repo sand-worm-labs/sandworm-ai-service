@@ -6,6 +6,7 @@ from typing import AsyncIterator
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from src.providers.openrouter import make_streaming_llm
+from src.util.cache import publish_job_event
 
 from .models import IntentClass, ParseIntentRequest, ParsedIntent
 
@@ -198,6 +199,8 @@ class ParseIntentService:
             elif status == "clarify":
                 payload["message"]   = data.get("message")
                 payload["questions"] = data.get("questions", [])
+                if self.req.job_id:
+                    await publish_job_event(self.req.job_id, {"type": "follow_up", **payload})
 
             yield json.dumps(payload)
 

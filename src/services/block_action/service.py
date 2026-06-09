@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 
-from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage
+from src.providers.openrouter import make_llm
 
 from src.services.block_planner.models import BlockPlan, PlannedBlock
 from src.services.intent.models import Intent
@@ -65,7 +65,7 @@ def _user_message(
 
 class BlockActionService:
     def __init__(self, api_key: str, model: str):
-        self.llm = ChatOpenRouter(api_key=api_key, model=model, temperature=0)
+        self.llm = make_llm(api_key, model)
 
     async def generate_blocks(self, plan: BlockPlan, intent: Intent) -> list[GeneratedBlock]:
         generated: list[GeneratedBlock] = []

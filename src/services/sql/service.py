@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage
+from src.providers.openrouter import make_llm
 
 from src.web.routes.sql.models import EditSqlRequest, FixSqlRequest
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 import re
 
-from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage
+from src.providers.openrouter import make_llm
 
 from .models import PlanBlocksRequest, BlockPlan
 
@@ -55,11 +55,7 @@ def _intent_summary(req: PlanBlocksRequest) -> str:
 
 class PlanBlocksService:
     def __init__(self, req: PlanBlocksRequest):
-        self.llm = ChatOpenRouter(
-            api_key=req.openrouter_api_key,
-            model=req.model,
-            temperature=0,
-        )
+        self.llm = make_llm(req.openrouter_api_key, req.model)
         self.req = req
 
     async def plan(self) -> BlockPlan:

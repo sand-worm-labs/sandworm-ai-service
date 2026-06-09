@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage
+from src.providers.openrouter import make_llm
 
 from src.services.completions.models import CompletionRequest
 
@@ -12,10 +12,11 @@ SYSTEM_PROMPT = """Generate a short, concise title for this conversation.
 
 class ChatTitleService:
     def __init__(self, req: CompletionRequest) -> None:
-        self.llm = ChatOpenRouter(
+        self.llm = make_llm(
             api_key=req.openrouter_api_key,
             model=req.model,
-            temperature=0,
+            temperature=req.temperature,
+            max_tokens=req.max_tokens,
         )
         self.req = req
 

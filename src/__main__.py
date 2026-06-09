@@ -3,6 +3,8 @@ from fastapi import FastAPI, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from src.config.settings import settings
+from src.util.cache import init_redis, close_redis
 from src.web.middleware.auth import verify_handshake
 from src.web.routes.health.router import router as health_router
 from src.web.routes.chat.title import router as chat_title_router
@@ -15,7 +17,9 @@ from src.web.routes.markdown.router import router as markdown_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await init_redis(settings.redis_url)
     yield
+    await close_redis()
 
 app = FastAPI(
     title="Sandworm AI Service",

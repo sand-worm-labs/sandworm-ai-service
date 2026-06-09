@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage
+from src.providers.openrouter import make_llm
 
 from src.config.settings import settings
 from src.web.routes.document.models import DocumentTitleRequest
@@ -16,11 +16,7 @@ SYSTEM_PROMPT = """Generate a short, concise title for this analytics document.
 
 class DocumentTitleService:
     def __init__(self, req: DocumentTitleRequest) -> None:
-        self.llm = ChatOpenRouter(
-            api_key=req.openrouter_api_key,
-            model=req.model,
-            temperature=0,
-        )
+        self.llm = make_llm(api_key=req.openrouter_api_key, model=req.model)
         self.req = req
 
     async def generate(self) -> str:

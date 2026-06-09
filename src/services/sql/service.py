@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage
+from src.providers.openrouter import make_llm
 
 from src.web.routes.sql.models import EditSqlRequest, FixSqlRequest
 
@@ -17,7 +17,7 @@ Return only the corrected raw SQL. Do NOT wrap the output in ```sql or any other
 
 class SqlService:
     def __init__(self, api_key: str, model: str) -> None:
-        self.llm = ChatOpenRouter(api_key=api_key, model=model, temperature=0)
+        self.llm = make_llm(api_key=api_key, model=model)
 
     async def edit(self, req: EditSqlRequest) -> str:
         res = await self.llm.ainvoke([

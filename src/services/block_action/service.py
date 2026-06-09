@@ -4,6 +4,7 @@ import re
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
+from src.util.cache import get_cached, make_llm_cache_key, set_cached
 
 from src.services.block_planner.models import BlockPlan, PlannedBlock
 from src.services.intent.models import Intent

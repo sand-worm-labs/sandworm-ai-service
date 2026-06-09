@@ -21,6 +21,7 @@ qdrant-client = "^1.17.1"
 langchain-openrouter = ">=0.2.1"
 langchain = "^1.2.15"
 langgraph = "^1.1.6"
+redis = {extras = ["asyncio"], version = "^8.0.0"}
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.15.8"

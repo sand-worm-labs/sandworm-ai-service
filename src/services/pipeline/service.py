@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, field
 
 from src.config.settings import settings
 from src.models.base import ChatContext
@@ -23,6 +24,7 @@ class PipelineState:
     model: str
     api_key: str
     context: ChatContext
+    job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     parsed_intent: ParsedIntent | None = None
     block_plan: BlockPlan | None = None
     generated_blocks: list[GeneratedBlock] | None = None

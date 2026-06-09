@@ -4,8 +4,8 @@ import json
 import re
 from typing import AsyncIterator
 
-from langchain_openrouter import ChatOpenRouter
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from src.providers.openrouter import make_streaming_llm
 
 from .models import IntentClass, ParseIntentRequest, ParsedIntent
 
@@ -93,12 +93,7 @@ JSON only.""",
 
 class ParseIntentService:
     def __init__(self, req: ParseIntentRequest):
-        self.llm = ChatOpenRouter(
-            api_key=req.openrouter_api_key,
-            model=req.model,
-            temperature=0,
-            streaming=True,
-        )
+        self.llm = make_streaming_llm(api_key=req.openrouter_api_key, model=req.model)
         self.req = req
 
     async def _classify(self) -> tuple[IntentClass, bool]:

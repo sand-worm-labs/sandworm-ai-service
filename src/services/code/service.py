@@ -17,7 +17,7 @@ Return only the corrected raw Python code. Do NOT wrap the output in ```python o
 
 class CodeService:
     def __init__(self, api_key: str, model: str) -> None:
-        self.llm = ChatOpenRouter(api_key=api_key, model=model, temperature=0)
+        self.llm = make_llm(api_key=api_key, model=model)
 
     async def edit(self, req: EditCodeRequest) -> str:
         res = await self.llm.ainvoke([

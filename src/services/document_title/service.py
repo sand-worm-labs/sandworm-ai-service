@@ -16,11 +16,7 @@ SYSTEM_PROMPT = """Generate a short, concise title for this analytics document.
 
 class DocumentTitleService:
     def __init__(self, req: DocumentTitleRequest) -> None:
-        self.llm = ChatOpenRouter(
-            api_key=req.openrouter_api_key,
-            model=req.model,
-            temperature=0,
-        )
+        self.llm = make_llm(api_key=req.openrouter_api_key, model=req.model)
         self.req = req
 
     async def generate(self) -> str:

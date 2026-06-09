@@ -13,7 +13,7 @@ Return only the raw markdown. Do NOT wrap the output in ```markdown or any other
 
 class MarkdownService:
     def __init__(self, api_key: str, model: str) -> None:
-        self.llm = ChatOpenRouter(api_key=api_key, model=model, temperature=0)
+        self.llm = make_llm(api_key=api_key, model=model)
 
     async def edit(self, req: EditMarkdownRequest) -> str:
         res = await self.llm.ainvoke([

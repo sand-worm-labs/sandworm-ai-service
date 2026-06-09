@@ -145,11 +145,6 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
         await publish_job_event(job_id, {"type": "started"})
 
         state = await node_parse_intent(state)
-        await publish_job_event(job_id, {
-            "type": "intent_parsed",
-            "intent_class": state.parsed_intent.intent_class.value,
-            "intent_status": state.parsed_intent.intent_status,
-        })
         if not state.parsed_intent.is_complete:
             return state
 

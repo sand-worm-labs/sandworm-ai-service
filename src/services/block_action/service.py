@@ -65,9 +65,10 @@ def _user_message(
 
 
 class BlockActionService:
-    def __init__(self, api_key: str, model: str, job_id: str | None = None):
+    def __init__(self, api_key: str, model: str, job_id: str | None = None, chat_id: str | None = None):
         self.llm = make_llm(api_key, model)
         self.job_id = job_id
+        self.chat_id = chat_id
 
     async def generate_blocks(self, plan: BlockPlan, intent: Intent) -> list[GeneratedBlock]:
         generated: list[GeneratedBlock] = []
@@ -81,7 +82,7 @@ class BlockActionService:
                     "total": total,
                     "block_type": block.type,
                     "title": block.title,
-                })
+                }, self.chat_id)
 
             system = _SYSTEM[block.type]
             user = _user_message(block, intent, generated)
@@ -107,6 +108,6 @@ class BlockActionService:
                     "index": index,
                     "total": total,
                     "block": generated_block.model_dump(),
-                })
+                }, self.chat_id)
 
         return generated

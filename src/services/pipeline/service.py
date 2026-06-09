@@ -110,7 +110,8 @@ async def node_plan_blocks(state: PipelineState) -> PipelineState:
 
 async def node_generate_blocks(state: PipelineState) -> PipelineState:
     intent = Intent.model_validate(state.parsed_intent.intent)
-    service = BlockActionService(api_key=state.api_key, model=state.model, job_id=state.job_id)
+    chat_id = state.context.chat_id if isinstance(state.context, ChatContext) else None
+    service = BlockActionService(api_key=state.api_key, model=state.model, job_id=state.job_id, chat_id=chat_id)
     state.generated_blocks = await service.generate_blocks(state.block_plan, intent)
     return state
 
@@ -141,19 +142,20 @@ async def node_complete(state: PipelineState) -> PipelineState:
 
 async def run_pipeline(state: PipelineState) -> PipelineState:
     job_id = state.job_id
+    chat_id = state.context.chat_id if isinstance(state.context, ChatContext) else None
     try:
-        await publish_job_event(job_id, {"type": "started"})
+        await publish_job_event(job_id, {"type": "started"}, chat_id)
 
         state = await node_parse_intent(state)
         if not state.parsed_intent.is_complete:
             return state
 
-        await publish_job_event(job_id, {"type": "fetching_notebook_context"})
+        await publish_job_event(job_id, {"type": "fetching_notebook_context"}, chat_id)
         state = await node_fetch_notebook_context(state)
-        await publish_job_event(job_id, {"type": "context_fetched"})
+        await publish_job_event(job_id, {"type": "context_fetched"}, chat_id)
 
         if state.parsed_intent.intent_class in (IntentClass.ANALYTICAL, IntentClass.EDITORIAL):
-            await publish_job_event(job_id, {"type": "planning"})
+            await publish_job_event(job_id, {"type": "planning"}, chat_id)
             state = await node_plan_blocks(state)
             await publish_job_event(job_id, {
                 "type": "plan_ready",
@@ -161,18 +163,18 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
                     {"type": b.type, "title": b.title, "description": b.description}
                     for b in state.block_plan.blocks
                 ],
-            })
+            }, chat_id)
 
             state = await node_generate_blocks(state)
 
-        await publish_job_event(job_id, {"type": "generating_response"})
+        await publish_job_event(job_id, {"type": "generating_response"}, chat_id)
         state = await node_complete(state)
-        await publish_job_event(job_id, {"type": "completed", "output": state.output})
+        await publish_job_event(job_id, {"type": "completed", "output": state.output}, chat_id)
         return state
 
     except Exception as exc:
-        await publish_job_event(job_id, {"type": "error", "detail": str(exc)})
+        await publish_job_event(job_id, {"type": "error", "detail": str(exc)}, chat_id)
         raise
     finally:
-        if isinstance(state.context, ChatContext):
-            await clear_active_job(state.context.chat_id)
+        if chat_id is not None:
+            await clear_active_job(chat_id)

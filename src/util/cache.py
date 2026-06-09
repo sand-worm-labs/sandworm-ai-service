@@ -58,8 +58,10 @@ async def clear_active_job(chat_id: str) -> None:
     await _client_or_raise().delete(f"active_job:{chat_id}")
 
 
-async def publish_job_event(job_id: str, event: dict[str, Any]) -> None:
+async def publish_job_event(job_id: str, event: dict[str, Any], chat_id: str | None = None) -> None:
     client = _client_or_raise()
+    if chat_id is not None:
+        event = {**event, "chat_id": chat_id}
     payload = json.dumps(event)
     key = f"job:{job_id}:events"
     async with client.pipeline() as pipe:

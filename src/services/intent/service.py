@@ -8,6 +8,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from src.providers.openrouter import make_streaming_llm
 from src.util.cache import publish_job_event
 
+from src.models.base import ChatContext
 from .models import IntentClass, ParseIntentRequest, ParsedIntent
 
 
@@ -133,9 +134,13 @@ class ParseIntentService:
                     continue
         return False
 
+    @property
+    def _chat_id(self) -> str | None:
+        return self.req.context.chat_id if isinstance(self.req.context, ChatContext) else None
+
     async def _publish(self, event_type: str, payload: dict) -> None:
         if self.req.job_id:
-            await publish_job_event(self.req.job_id, {"type": event_type, **payload})
+            await publish_job_event(self.req.job_id, {"type": event_type, **payload}, self._chat_id)
 
     async def stream(self) -> AsyncIterator[str]:
         try:

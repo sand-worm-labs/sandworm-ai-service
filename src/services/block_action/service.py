@@ -4,7 +4,7 @@ import re
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
-from src.util.cache import get_cached, make_llm_cache_key, publish_job_event, set_cached
+from src.util.cache import publish_job_event
 
 from src.services.block_planner.models import BlockPlan, PlannedBlock
 from src.services.intent.models import Intent
@@ -74,6 +74,15 @@ class BlockActionService:
         total = len(plan.blocks)
 
         for index, block in enumerate(plan.blocks):
+            if self.job_id:
+                await publish_job_event(self.job_id, {
+                    "type": "generating_block",
+                    "index": index,
+                    "total": total,
+                    "block_type": block.type,
+                    "title": block.title,
+                })
+
             system = _SYSTEM[block.type]
             user = _user_message(block, intent, generated)
 

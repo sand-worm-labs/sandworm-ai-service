@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+from typing import Any, AsyncIterator
 
 import redis.asyncio as aioredis
 
@@ -61,6 +61,14 @@ async def clear_active_job(chat_id: str) -> None:
 async def publish_job_event(job_id: str, event: dict[str, Any]) -> None:
     client = _client_or_raise()
     payload = json.dumps(event)
-    key = f"job:{job_id}:event"
-    await client.set(key, payload, ex=JOB_EVENT_TTL)
-    await client.publish(f"job:{job_id}", payload)
+    key = f"job:{job_id}:events"
+    async with client.pipeline() as pipe:
+        await pipe.rpush(key, payload)
+        await pipe.expire(key, JOB_EVENT_TTL)
+        await pipe.publish(f"job:{job_id}", payload)
+        await pipe.execute()
+
+
+async def get_job_events(job_id: str) -> list[dict[str, Any]]:
+    raw = await _client_or_raise().lrange(f"job:{job_id}:events", 0, -1)
+    return [json.loads(r) for r in raw]

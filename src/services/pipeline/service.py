@@ -148,18 +148,24 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
         if not state.parsed_intent.is_complete:
             return state
 
+        await publish_job_event(job_id, {"type": "fetching_notebook_context"})
         state = await node_fetch_notebook_context(state)
         await publish_job_event(job_id, {"type": "context_fetched"})
 
         if state.parsed_intent.intent_class in (IntentClass.ANALYTICAL, IntentClass.EDITORIAL):
+            await publish_job_event(job_id, {"type": "planning"})
             state = await node_plan_blocks(state)
             await publish_job_event(job_id, {
                 "type": "plan_ready",
-                "blocks": [{"type": b.type, "title": b.title} for b in state.block_plan.blocks],
+                "blocks": [
+                    {"type": b.type, "title": b.title, "description": b.description}
+                    for b in state.block_plan.blocks
+                ],
             })
 
             state = await node_generate_blocks(state)
 
+        await publish_job_event(job_id, {"type": "generating_response"})
         state = await node_complete(state)
         await publish_job_event(job_id, {"type": "completed", "output": state.output})
         return state

@@ -8,10 +8,7 @@ from src.web.routes.document.models import DocumentTitleRequest
 from src.services.notebook_context.service import NotebookContextService
 from src.services.notebook_context.models import AiContextRequest
 from src.services.intent.models import IntentClass
-
-
-SYSTEM_PROMPT = """Generate a short, concise title for this analytics document.
-3-6 words max. No punctuation. No quotes. Just the title."""
+from .prompts import SYSTEM_PROMPT
 
 
 class DocumentTitleService:

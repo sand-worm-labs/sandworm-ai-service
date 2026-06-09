@@ -4,11 +4,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
 
 from src.web.routes.markdown.models import EditMarkdownRequest
-
-
-EDIT_SYSTEM_PROMPT = """You are an expert technical writer.
-Edit the provided markdown content according to the user's instructions.
-Return only the raw markdown. Do NOT wrap the output in ```markdown or any other code fences. No extra commentary, no preamble."""
+from .prompts import EDIT_SYSTEM_PROMPT
 
 
 class MarkdownService:

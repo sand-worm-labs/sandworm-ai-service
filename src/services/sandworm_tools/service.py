@@ -1,16 +1,16 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
-from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
+log = logging.getLogger("sandworm.tools")
 
-from openai import AsyncOpenAI
+import httpx
+from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
 
 from src.config.settings import settings
 from src.services.sandworm_tools.models import SandwormTool
-from src.util.qdrant import get_qdrant, VECTOR_SIZE
-
-_openai = AsyncOpenAI(base_url=settings.AI_OPENROUTER_BASE_URL, api_key=settings.OPENROUTER_API_KEY)
+from src.util.qdrant import get_qdrant
 
 COLLECTION = "sandworm_tools"
 
@@ -35,47 +35,47 @@ class SandwormToolsService:
     def __init__(self):
         self._client = get_qdrant()
 
-    async def ensure_collection(self) -> None:
-        exists = await self._client.collection_exists(COLLECTION)
-        if not exists:
-            await self._client.create_collection(
-                collection_name=COLLECTION,
-                vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+    async def _embed_batch(self, texts: list[str]) -> list[list[float]]:
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                "https://openrouter.ai/api/v1/embeddings",
+                headers={"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}"},
+                json={"model": "openai/text-embedding-3-large", "input": texts},
+                timeout=60,
             )
-    
-    async def embed(self, text: str) -> list[float]:
-        res = await _openai.embeddings.create(
-            model="openai/text-embedding-3-large",
-            input=text,
-            encoding_format="float",
-        )
-        return res.data[0].embedding
+            res.raise_for_status()
+            return [item["embedding"] for item in res.json()["data"]]
 
-    async def upsert(self, tools: list[SandwormTool]) -> None:
-        await self.ensure_collection()
-        points = []
-        for tool in tools:
-            text = _build_embedding_text(tool)
-            vector = await self.embed(text)
-            points.append(
-                PointStruct(
-                    id=abs(hash(tool.tool_id)) % (2**63),
-                    vector=vector,
-                    payload={
-                        "tool_id": tool.tool_id,
-                        "g1": tool.g1,
-                        "g2": tool.g2,
-                        "g3": tool.g3,
-                        "g4": tool.g4,
-                        "g5": tool.g5,
-                        "description": tool.description,
-                        "scope": tool.scope,
-                        "returns": [r.model_dump() for r in tool.returns],
-                        "inputs": [i.model_dump() for i in tool.inputs],
-                    },
+    async def embed(self, text: str) -> list[float]:
+        return (await self._embed_batch([text]))[0]
+
+    async def upsert(self, tools: list[SandwormTool], batch_size: int = 400) -> None:
+        for i in range(0, len(tools), batch_size):
+            batch = tools[i : i + batch_size]
+            log.info("batch %d — embedding %d tools (%d–%d of %d)", i // batch_size + 1, len(batch), i + 1, min(i + batch_size, len(tools)), len(tools))
+            texts = [_build_embedding_text(t) for t in batch]
+            vectors = await self._embed_batch(texts)
+            points = []
+            for tool, vector in zip(batch, vectors):
+                points.append(
+                    PointStruct(
+                        id=abs(hash(tool.tool_id)) % (2**63),
+                        vector=vector,
+                        payload={
+                            "tool_id": tool.tool_id,
+                            "g1": tool.g1,
+                            "g2": tool.g2,
+                            "g3": tool.g3,
+                            "g4": tool.g4,
+                            "g5": tool.g5,
+                            "description": tool.description,
+                            "scope": tool.scope,
+                            "returns": [r.model_dump() for r in tool.returns],
+                            "inputs": [i.model_dump() for i in tool.inputs],
+                        },
+                    )
                 )
-            )
-        await self._client.upsert(collection_name=COLLECTION, points=points)
+            await self._client.upsert(collection_name=COLLECTION, points=points)
 
     async def search(
         self,
@@ -83,7 +83,7 @@ class SandwormToolsService:
         top_k: int = 5,
         filter_g1: str | None = None,
     ) -> list[dict[str, Any]]:
-        vector = await self._embed(query)
+        vector = await self.embed(query)
 
         qdrant_filter = None
         if filter_g1:

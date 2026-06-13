@@ -1,4 +1,11 @@
+import logging
 from contextlib import asynccontextmanager
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+log = logging.getLogger("sandworm")
 from fastapi import FastAPI, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,12 +33,17 @@ async def _dummy_embed(_: str) -> list[float]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    log.info("starting up…")
     await init_redis(settings.redis_url)
+    log.info("redis connected")
     await init_qdrant(settings.qdrant_url, settings.qdrant_api_key)
-    await seed_tools(_dummy_embed, TOOLS_CSV)
+    log.info("qdrant connected")
+    await seed_tools(TOOLS_CSV)
+    log.info("tools seeded")
     yield
     await close_redis()
     await close_qdrant()
+    log.info("shutdown complete")
 
 app = FastAPI(
     title="Sandworm AI Service",

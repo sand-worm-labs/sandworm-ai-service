@@ -14,7 +14,7 @@ _client: AsyncQdrantClient | None = None
 
 async def init_qdrant(url: str, api_key: str | None = None) -> None:
     global _client
-    _client = AsyncQdrantClient(url=url, api_key=api_key)
+    _client = AsyncQdrantClient(url=url, api_key=api_key or None)
     for name, params in COLLECTIONS.items():
         if not await _client.collection_exists(name):
             await _client.create_collection(collection_name=name, vectors_config=params)

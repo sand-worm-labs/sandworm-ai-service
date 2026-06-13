@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 from pathlib import Path
+
+log = logging.getLogger("sandworm.seed")
 
 from src.services.sandworm_tools.models import SandwormTool, ToolInput, ToolReturn
 from src.services.sandworm_tools.service import SandwormToolsService, COLLECTION
@@ -48,19 +51,22 @@ def _parse_tools(csv_path: Path) -> list[SandwormTool]:
                     inputs=inputs,
                 ))
             except Exception as e:
-                print(f"[seed_tools] skipping row {row.get('tool_id')}: {e}")
+                log.warning("skipping row %s: %s", row.get("tool_id"), e)
                 continue
     return tools
 
 
 async def seed_tools(csv_path: Path) -> None:
-    service = SandwormToolsService()
-    await service.ensure_collection()
-
     if await collection_has_data(COLLECTION):
+        log.info("collection already seeded, skipping")
         return
 
     tools = _parse_tools(csv_path)
     if not tools:
+        log.warning("no tools parsed from %s", csv_path)
         return
+
+    log.info("seeding %d tools from %s", len(tools), csv_path)
+    service = SandwormToolsService()
     await service.upsert(tools)
+    log.info("seeding complete")

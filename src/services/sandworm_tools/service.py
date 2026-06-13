@@ -2,25 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import (
-    Distance,
-    PointStruct,
-    VectorParams,
-    Filter,
-    FieldCondition,
-    MatchValue,
-)
+from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct, VectorParams
 
-from src.config.settings import settings
 from src.services.sandworm_tools.models import SandwormTool
+from src.util.qdrant import get_qdrant
 
 COLLECTION = "sandworm_tools"
 VECTOR_SIZE = 1536
-
-
-def _client() -> AsyncQdrantClient:
-    return AsyncQdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key)
 
 
 def _build_embedding_text(tool: SandwormTool) -> str:
@@ -41,9 +29,8 @@ def _build_embedding_text(tool: SandwormTool) -> str:
 
 class SandwormToolsService:
     def __init__(self, embed_fn):
-        """embed_fn: async callable (text: str) -> list[float]"""
         self._embed = embed_fn
-        self._client = _client()
+        self._client = get_qdrant()
 
     async def ensure_collection(self) -> None:
         exists = await self._client.collection_exists(COLLECTION)

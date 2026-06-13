@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     AI_OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     NEST_BASE_URL: str = "http://localhost:8081/api/"
     REDIS_URL: str = "redis://host.docker.internal:6379/0"
+    QDRANT_URL: str = "http://localhost:6333"
+    QDRANT_API_KEY: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parent.parent.parent / ".env",
@@ -26,5 +28,13 @@ class Settings(BaseSettings):
     @property
     def redis_url(self) -> str:
         return self.REDIS_URL
+
+    @property
+    def qdrant_url(self) -> str:
+        return self.QDRANT_URL
+
+    @property
+    def qdrant_api_key(self) -> str | None:
+        return self.QDRANT_API_KEY
 
 settings = Settings()

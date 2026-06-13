@@ -111,11 +111,11 @@ app.include_router(
     dependencies=[Depends(verify_handshake)],
 )
 
-# app.include_router(
-#     select_tool_router,
-#     prefix="/select-tool",
-#     dependencies=[Depends(verify_handshake)],
-# )
+app.include_router(
+    select_tool_router,
+    prefix="/select-tool",
+    dependencies=[Depends(verify_handshake)],
+)
 
 @app.get("/", include_in_schema=False)
 def root():

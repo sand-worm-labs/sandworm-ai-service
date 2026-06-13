@@ -4,10 +4,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
 
 from src.services.completions.models import CompletionRequest
-
-
-SYSTEM_PROMPT = """Generate a short, concise title for this conversation.
-3-6 words max. No punctuation. No quotes. Just the title."""
+from .prompts import SYSTEM_PROMPT
 
 
 class ChatTitleService:

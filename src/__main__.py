@@ -1,10 +1,20 @@
+import logging
 from contextlib import asynccontextmanager
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+log = logging.getLogger("sandworm")
 from fastapi import FastAPI, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from src.config.settings import settings
-from src.util.cache import init_redis, close_redis
+from pathlib import Path
+from src.util.redis_client import init_redis, close_redis
+from src.util.qdrant import init_qdrant, close_qdrant
+from src.util.seed_tools import seed_tools
 from src.web.middleware.auth import verify_handshake
 from src.web.routes.health.router import router as health_router
 from src.web.routes.chat.title import router as chat_title_router
@@ -14,12 +24,26 @@ from src.web.routes.intent.test_intent import router as intent_router
 from src.web.routes.code.router import router as code_router
 from src.web.routes.sql.router import router as sql_router
 from src.web.routes.markdown.router import router as markdown_router
+from src.web.routes.select_tool.router import router as select_tool_router
+
+TOOLS_CSV = Path(__file__).resolve().parent / "example_tools" / "example.csv"
+
+async def _dummy_embed(_: str) -> list[float]:
+    return [0.0] * 3072
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    log.info("starting up…")
     await init_redis(settings.redis_url)
+    log.info("redis connected")
+    await init_qdrant(settings.qdrant_url, settings.qdrant_api_key)
+    log.info("qdrant connected")
+    await seed_tools(TOOLS_CSV)
+    log.info("tools seeded")
     yield
     await close_redis()
+    await close_qdrant()
+    log.info("shutdown complete")
 
 app = FastAPI(
     title="Sandworm AI Service",
@@ -84,6 +108,12 @@ app.include_router(
 app.include_router(
     markdown_router,
     prefix="/markdown",
+    dependencies=[Depends(verify_handshake)],
+)
+
+app.include_router(
+    select_tool_router,
+    prefix="/select-tool",
     dependencies=[Depends(verify_handshake)],
 )
 

@@ -3,8 +3,10 @@ from __future__ import annotations
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Distance, VectorParams
 
+VECTOR_SIZE = 3072
+
 COLLECTIONS: dict[str, VectorParams] = {
-    "sandworm_tools": VectorParams(size=1536, distance=Distance.COSINE),
+    "sandworm_tools": VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
 }
 
 _client: AsyncQdrantClient | None = None

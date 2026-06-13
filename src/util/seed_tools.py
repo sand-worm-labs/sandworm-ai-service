@@ -12,7 +12,7 @@ from src.util.qdrant import collection_has_data
 def _parse_tools(csv_path: Path) -> list[SandwormTool]:
     tools = []
     with csv_path.open() as f:
-        for row in csv.DictReader(f, delimiter="\t"):
+        for row in csv.DictReader(f):
             try:
                 raw_returns = json.loads(row.get("returns") or "[]")
                 returns = [
@@ -47,17 +47,20 @@ def _parse_tools(csv_path: Path) -> list[SandwormTool]:
                     returns=returns,
                     inputs=inputs,
                 ))
-            except Exception:
+            except Exception as e:
+                print(f"[seed_tools] skipping row {row.get('tool_id')}: {e}")
                 continue
     return tools
 
 
-async def seed_tools(embed_fn, csv_path: Path) -> None:
-    service = SandwormToolsService(embed_fn)
+async def seed_tools(csv_path: Path) -> None:
+    service = SandwormToolsService()
     await service.ensure_collection()
 
     if await collection_has_data(COLLECTION):
         return
 
     tools = _parse_tools(csv_path)
+    if not tools:
+        return
     await service.upsert(tools)

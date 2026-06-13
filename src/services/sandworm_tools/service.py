@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct, VectorParams
+from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
 
+from openai import AsyncOpenAI
+
+from src.config.settings import settings
 from src.services.sandworm_tools.models import SandwormTool
-from src.util.qdrant import get_qdrant
+from src.util.qdrant import get_qdrant, VECTOR_SIZE
+
+_openai = AsyncOpenAI(base_url=settings.AI_OPENROUTER_BASE_URL, api_key=settings.OPENROUTER_API_KEY)
 
 COLLECTION = "sandworm_tools"
-VECTOR_SIZE = 1536
 
 
 def _build_embedding_text(tool: SandwormTool) -> str:
@@ -28,8 +32,7 @@ def _build_embedding_text(tool: SandwormTool) -> str:
 
 
 class SandwormToolsService:
-    def __init__(self, embed_fn):
-        self._embed = embed_fn
+    def __init__(self):
         self._client = get_qdrant()
 
     async def ensure_collection(self) -> None:
@@ -39,13 +42,21 @@ class SandwormToolsService:
                 collection_name=COLLECTION,
                 vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
             )
+    
+    async def embed(self, text: str) -> list[float]:
+        res = await _openai.embeddings.create(
+            model="openai/text-embedding-3-large",
+            input=text,
+            encoding_format="float",
+        )
+        return res.data[0].embedding
 
     async def upsert(self, tools: list[SandwormTool]) -> None:
         await self.ensure_collection()
         points = []
         for tool in tools:
             text = _build_embedding_text(tool)
-            vector = await self._embed(text)
+            vector = await self.embed(text)
             points.append(
                 PointStruct(
                     id=abs(hash(tool.tool_id)) % (2**63),

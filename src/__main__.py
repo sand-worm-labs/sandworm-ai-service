@@ -1,5 +1,6 @@
+import asyncio
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,6 +26,7 @@ from src.web.routes.code.router import router as code_router
 from src.web.routes.sql.router import router as sql_router
 from src.web.routes.markdown.router import router as markdown_router
 from src.web.routes.select_tool.router import router as select_tool_router
+from src.services.notebook_events.listener import listen as listen_notebook_events
 
 TOOLS_CSV = Path(__file__).resolve().parent / "example_tools" / "example.csv"
 
@@ -40,7 +42,12 @@ async def lifespan(app: FastAPI):
     log.info("qdrant connected")
     await seed_tools(TOOLS_CSV)
     log.info("tools seeded")
+    listener = asyncio.create_task(listen_notebook_events())
+    log.info("notebook event listener started")
     yield
+    listener.cancel()
+    with suppress(asyncio.CancelledError):
+        await listener
     await close_redis()
     await close_qdrant()
     log.info("shutdown complete")

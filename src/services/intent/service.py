@@ -144,11 +144,11 @@ class ParseIntentService:
                 await self._publish("follow_up", payload)
 
             else:
-                await self._publish("intent_error", payload)
+                await self._publish("intent_error", {**payload, "message": "Intent parsing failed"})
 
             yield json.dumps(payload)
 
         except Exception as exc:
-            error = {"status": "error", "detail": str(exc)}
+            error = {"status": "error", "message": str(exc)}
             await self._publish("intent_error", error)
             yield json.dumps(error)

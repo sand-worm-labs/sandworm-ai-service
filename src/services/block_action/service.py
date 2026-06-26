@@ -52,13 +52,22 @@ class BlockActionService:
         total = len(plan.blocks)
 
         for index, block in enumerate(plan.blocks):
+            generated_block = GeneratedBlock(
+                type=block.type,
+                title=block.title,
+                description=block.description,
+                content="",
+                depends_on=block.depends_on,
+            )
+
             if self.job_id:
                 await publish_job_event(self.job_id, {
                     "type": "generating_block",
+                    "block_id": generated_block.id,
+                    "block_type": block.type,
+                    "block_title": block.title,
                     "index": index,
                     "total": total,
-                    "block_type": block.type,
-                    "title": block.title,
                 }, self.chat_id)
 
             system = SYSTEM_PROMPTS[block.type]
@@ -69,22 +78,18 @@ class BlockActionService:
                 HumanMessage(content=user),
             ])
             content = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", response.content.strip())
-
-            generated_block = GeneratedBlock(
-                type=block.type,
-                title=block.title,
-                description=block.description,
-                content=content,
-                depends_on=block.depends_on,
-            )
+            generated_block.content = content
             generated.append(generated_block)
 
             if self.job_id:
                 await publish_job_event(self.job_id, {
                     "type": "block_ready",
+                    "block_id": generated_block.id,
+                    "block_type": block.type,
+                    "block_title": block.title,
+                    "content": content,
                     "index": index,
                     "total": total,
-                    "block": generated_block.model_dump(),
                 }, self.chat_id)
 
         return generated

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from dataclasses import dataclass, field
 
@@ -132,9 +133,11 @@ async def node_complete(state: PipelineState) -> PipelineState:
         context=state.context,
     )
 
+    chat_id = state.context.chat_id if isinstance(state.context, ChatContext) else None
     result = ""
     async for chunk in CompletionService().stream(req):
         result += chunk
+        await publish_job_event(state.job_id, {"type": "generating_response", "token": chunk}, chat_id)
 
     state.output = result
     return state
@@ -155,25 +158,29 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
         await publish_job_event(job_id, {"type": "context_fetched"}, chat_id)
 
         if state.parsed_intent.intent_class in (IntentClass.ANALYTICAL, IntentClass.EDITORIAL):
-            await publish_job_event(job_id, {"type": "planning"}, chat_id)
+            planning_start = time.monotonic()
             state = await node_plan_blocks(state)
+            duration_ms = int((time.monotonic() - planning_start) * 1000)
+            block_summaries = ", ".join(f"{b.type}: {b.title}" for b in state.block_plan.blocks)
+            thinking = f"Planning {len(state.block_plan.blocks)} block(s): {block_summaries}"
             await publish_job_event(job_id, {
                 "type": "plan_ready",
+                "thinking": thinking,
+                "duration_ms": duration_ms,
                 "blocks": [
-                    {"type": b.type, "title": b.title, "description": b.description}
+                    {"type": b.type, "title": b.title}
                     for b in state.block_plan.blocks
                 ],
             }, chat_id)
 
             state = await node_generate_blocks(state)
 
-        await publish_job_event(job_id, {"type": "generating_response"}, chat_id)
         state = await node_complete(state)
-        await publish_job_event(job_id, {"type": "completed", "output": state.output}, chat_id)
+        await publish_job_event(job_id, {"type": "completed"}, chat_id)
         return state
 
     except Exception as exc:
-        await publish_job_event(job_id, {"type": "error", "detail": str(exc)}, chat_id)
+        await publish_job_event(job_id, {"type": "error", "message": str(exc), "retryable": False}, chat_id)
         raise
     finally:
         if chat_id is not None:

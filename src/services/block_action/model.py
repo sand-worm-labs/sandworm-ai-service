@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Literal
 from pydantic import BaseModel, Field
 
@@ -16,6 +17,7 @@ BlockType = Literal["sql", "python", "visualization", "markdown"]
 
 
 class GeneratedBlock(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     type: BlockType
     title: str
     description: str

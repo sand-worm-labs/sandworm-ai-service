@@ -7,7 +7,19 @@ from src.models.base import BaseAiRequest, ChatContext, DocumentContext, Message
 from src.services.intent.models import Intent
 
 
-BlockType = Literal["sql", "python", "visualization", "markdown"]
+BlockType = Literal[
+    "sql",
+    "python",
+    "visualization",
+    "pivot_table",
+    "markdown",
+    "rich_text",
+    "dashboard_header",
+    "input",
+    "dropdown_input",
+    "date_input",
+    "power_toolbox",
+]
 
 
 class PlannedBlock(BaseModel):

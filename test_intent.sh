@@ -5,7 +5,6 @@
 # =====================================
 
 BASE_URL="http://localhost:8000"
-API_KEY="${OPENROUTER_API_KEY}"
 MODEL="~anthropic/claude-haiku-latest"
 HANDSHAKE_TOKEN="1fcd4bf970d180bb56394fece06029ebf526555c9226ce38"
 
@@ -92,9 +91,8 @@ run_test() {
   local body
   body=$(jq -n \
     --arg msg "$message" \
-    --arg key "$API_KEY" \
     --arg model "$MODEL" \
-    '{message: $msg, openrouter_api_key: $key, model: $model,
+    '{message: $msg, model: $model,
       context: {user_id: "user_123", workspace_id: "ws_123", document_id: "doc_123"},
       history: []}')
 

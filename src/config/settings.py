@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://host.docker.internal:6379/0"
     QDRANT_URL: str = "http://host.docker.internal:6333"
     QDRANT_API_KEY: str | None = None
-    OPENROUTER_API_KEY: str 
+    OPENROUTER_EMBEDDING_KEY: str
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parent.parent.parent / ".env",
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
         return self.QDRANT_API_KEY
 
     @property
-    def openrouter_api_key(self) -> str:
-        return self.OPENROUTER_API_KEY
+    def openrouter_embedding_key(self) -> str:
+        return self.OPENROUTER_EMBEDDING_KEY
 
 settings = Settings()

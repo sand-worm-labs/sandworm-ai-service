@@ -39,7 +39,7 @@ class SandwormToolsService:
         async with httpx.AsyncClient() as client:
             res = await client.post(
                 "https://openrouter.ai/api/v1/embeddings",
-                headers={"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}"},
+                headers={"Authorization": f"Bearer {settings.OPENROUTER_EMBEDDING_KEY}"},
                 json={"model": "openai/text-embedding-3-large", "input": texts},
                 timeout=60,
             )

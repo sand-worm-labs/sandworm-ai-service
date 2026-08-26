@@ -7,15 +7,17 @@ from typing import AsyncIterator
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from src.providers.openrouter import make_streaming_llm
 from src.util.cache import publish_job_event
+from src.util.stream_events import StreamEnvelope
 
 from src.models.base import ChatContext
 from .models import IntentClass, ParseIntentRequest
 from .prompts import CLASSIFIER_PROMPT, SYSTEM_PROMPTS, _ANALYTICAL_PROMPT
 
 class ParseIntentService:
-    def __init__(self, req: ParseIntentRequest):
+    def __init__(self, req: ParseIntentRequest, envelope: StreamEnvelope | None = None):
         self.llm = make_streaming_llm(api_key=req.openrouter_api_key, model=req.model)
         self.req = req
+        self.envelope = envelope
 
     async def _classify(self) -> tuple[IntentClass, bool]:
         result = ""
@@ -139,16 +141,21 @@ class ParseIntentService:
                 await self._publish("intent_parsed", payload)
 
             elif status == "clarify":
-                payload["message"]   = data.get("message")
-                payload["questions"] = data.get("questions", [])
-                await self._publish("follow_up", payload)
+                message   = data.get("message")
+                questions = data.get("questions", [])
+                payload["message"]   = message
+                payload["questions"] = questions
+                if self.envelope:
+                    await self.envelope.follow_up(message, questions)
 
             else:
-                await self._publish("intent_error", {**payload, "message": "Intent parsing failed"})
+                if self.envelope:
+                    await self.envelope.error("intent_error", "Intent parsing failed")
 
             yield json.dumps(payload)
 
         except Exception as exc:
             error = {"status": "error", "message": str(exc)}
-            await self._publish("intent_error", error)
+            if self.envelope:
+                await self.envelope.error("intent_error", str(exc))
             yield json.dumps(error)

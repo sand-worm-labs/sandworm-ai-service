@@ -4,7 +4,7 @@ import re
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
-from src.util.cache import publish_job_event
+from src.util.stream_events import StreamEnvelope
 
 from src.services.block_planner.models import BlockPlan, PlannedBlock
 from src.services.intent.models import Intent
@@ -42,16 +42,14 @@ def _user_message(
 
 
 class BlockActionService:
-    def __init__(self, api_key: str, model: str, job_id: str | None = None, chat_id: str | None = None):
+    def __init__(self, api_key: str, model: str, envelope: StreamEnvelope | None = None):
         self.llm = make_llm(api_key, model)
-        self.job_id = job_id
-        self.chat_id = chat_id
+        self.envelope = envelope
 
     async def generate_blocks(self, plan: BlockPlan, intent: Intent) -> list[GeneratedBlock]:
         generated: list[GeneratedBlock] = []
-        total = len(plan.blocks)
 
-        for index, block in enumerate(plan.blocks):
+        for block in plan.blocks:
             generated_block = GeneratedBlock(
                 type=block.type,
                 title=block.title,
@@ -60,15 +58,8 @@ class BlockActionService:
                 depends_on=block.depends_on,
             )
 
-            if self.job_id:
-                await publish_job_event(self.job_id, {
-                    "type": "generating_block",
-                    "block_id": generated_block.id,
-                    "block_type": block.type,
-                    "block_title": block.title,
-                    "index": index,
-                    "total": total,
-                }, self.chat_id)
+            if self.envelope:
+                await self.envelope.block_generating(generated_block.id, block.type, block.title)
 
             system = SYSTEM_PROMPTS[block.type]
             user = _user_message(block, intent, generated)
@@ -81,15 +72,7 @@ class BlockActionService:
             generated_block.content = content
             generated.append(generated_block)
 
-            if self.job_id:
-                await publish_job_event(self.job_id, {
-                    "type": "block_ready",
-                    "block_id": generated_block.id,
-                    "block_type": block.type,
-                    "block_title": block.title,
-                    "content": content,
-                    "index": index,
-                    "total": total,
-                }, self.chat_id)
+            if self.envelope:
+                await self.envelope.block_ready(generated_block.id, block.type, block.title, content)
 
         return generated

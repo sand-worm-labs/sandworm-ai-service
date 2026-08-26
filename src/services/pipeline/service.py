@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 
 from src.config.settings import settings
 from src.models.base import ChatContext
-from src.util.cache import clear_active_job, publish_job_event
+from src.util.cache import clear_active_job
+from src.util.stream_events import StreamEnvelope
 from src.services.completions.service import CompletionService
 from src.services.completions.models import CompletionRequest, Message
 from src.services.notebook_context.service import NotebookContextService
@@ -42,7 +43,7 @@ class PipelineState:
         return self.parsed_intent is not None and self.parsed_intent.references_block
 
 
-async def node_parse_intent(state: PipelineState) -> PipelineState:
+async def node_parse_intent(state: PipelineState, envelope: StreamEnvelope) -> PipelineState:
     user_message = next(m for m in reversed(state.messages) if m.role == "user")
 
     req = ParseIntentRequest(
@@ -55,7 +56,7 @@ async def node_parse_intent(state: PipelineState) -> PipelineState:
     )
 
     raw = ""
-    async for chunk in ParseIntentService(req).stream():
+    async for chunk in ParseIntentService(req, envelope).stream():
         raw += chunk
 
     try:
@@ -109,15 +110,14 @@ async def node_plan_blocks(state: PipelineState) -> PipelineState:
     return state
 
 
-async def node_generate_blocks(state: PipelineState) -> PipelineState:
+async def node_generate_blocks(state: PipelineState, envelope: StreamEnvelope) -> PipelineState:
     intent = Intent.model_validate(state.parsed_intent.intent)
-    chat_id = state.context.chat_id if isinstance(state.context, ChatContext) else None
-    service = BlockActionService(api_key=state.api_key, model=state.model, job_id=state.job_id, chat_id=chat_id)
+    service = BlockActionService(api_key=state.api_key, model=state.model, envelope=envelope)
     state.generated_blocks = await service.generate_blocks(state.block_plan, intent)
     return state
 
 
-async def node_complete(state: PipelineState) -> PipelineState:
+async def node_complete(state: PipelineState, envelope: StreamEnvelope) -> PipelineState:
     messages = state.messages
 
     if state.notebook_markdown:
@@ -133,11 +133,10 @@ async def node_complete(state: PipelineState) -> PipelineState:
         context=state.context,
     )
 
-    chat_id = state.context.chat_id if isinstance(state.context, ChatContext) else None
     result = ""
     async for chunk in CompletionService().stream(req):
         result += chunk
-        await publish_job_event(state.job_id, {"type": "generating_response", "token": chunk}, chat_id)
+        await envelope.text_delta(chunk)
 
     state.output = result
     return state
@@ -146,16 +145,15 @@ async def node_complete(state: PipelineState) -> PipelineState:
 async def run_pipeline(state: PipelineState) -> PipelineState:
     job_id = state.job_id
     chat_id = state.context.chat_id if isinstance(state.context, ChatContext) else None
+    envelope = StreamEnvelope(job_id=job_id, chat_id=chat_id)
     try:
-        await publish_job_event(job_id, {"type": "started"}, chat_id)
+        await envelope.message_start()
 
-        state = await node_parse_intent(state)
+        state = await node_parse_intent(state, envelope)
         if not state.parsed_intent.is_complete:
             return state
 
-        await publish_job_event(job_id, {"type": "fetching_notebook_context"}, chat_id)
         state = await node_fetch_notebook_context(state)
-        await publish_job_event(job_id, {"type": "context_fetched"}, chat_id)
 
         if state.parsed_intent.intent_class in (IntentClass.ANALYTICAL, IntentClass.EDITORIAL):
             planning_start = time.monotonic()
@@ -163,24 +161,16 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
             duration_ms = int((time.monotonic() - planning_start) * 1000)
             block_summaries = ", ".join(f"{b.type}: {b.title}" for b in state.block_plan.blocks)
             thinking = f"Planning {len(state.block_plan.blocks)} block(s): {block_summaries}"
-            await publish_job_event(job_id, {
-                "type": "plan_ready",
-                "thinking": thinking,
-                "duration_ms": duration_ms,
-                "blocks": [
-                    {"type": b.type, "title": b.title}
-                    for b in state.block_plan.blocks
-                ],
-            }, chat_id)
+            await envelope.thinking(thinking, duration_ms)
 
-            state = await node_generate_blocks(state)
+            state = await node_generate_blocks(state, envelope)
 
-        state = await node_complete(state)
-        await publish_job_event(job_id, {"type": "completed"}, chat_id)
+        state = await node_complete(state, envelope)
+        await envelope.message_stop()
         return state
 
     except Exception as exc:
-        await publish_job_event(job_id, {"type": "error", "message": str(exc), "retryable": False}, chat_id)
+        await envelope.error("error", str(exc))
         raise
     finally:
         if chat_id is not None:

@@ -13,7 +13,19 @@ class BlockActionPart(BaseModel):
     blockId: str
 
 
-BlockType = Literal["sql", "python", "visualization", "markdown"]
+BlockType = Literal[
+    "sql",
+    "python",
+    "visualization",
+    "markdown",
+    "dashboard_header",
+    "pivot_table",
+    "rich_text",
+    "input",
+    "dropdown_input",
+    "date_input",
+    "power_toolbox",
+]
 
 
 class GeneratedBlock(BaseModel):

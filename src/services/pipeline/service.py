@@ -151,6 +151,12 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
 
         state = await node_parse_intent(state, envelope)
         if not state.parsed_intent.is_complete:
+            # A follow-up question still ends this turn — without message_stop
+            # the SSE stream never terminates, so the frontend's isLoading flag
+            # gets stuck and blocks the user's follow-up answer from sending.
+            # Safe to call even if an "error" event already ended the stream:
+            # the Node side no-ops on message_stop once the subject is gone.
+            await envelope.message_stop()
             return state
 
         state = await node_fetch_notebook_context(state)

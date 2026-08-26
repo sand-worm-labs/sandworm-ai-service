@@ -19,4 +19,28 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "You are writing a markdown block for an onchain analytics notebook. "
         "Return ONLY the markdown — no explanation, no surrounding fences."
     ),
+    "dashboard_header": (
+        "You are writing the heading for a notebook's dashboard header block. "
+        "Return ONLY a short, plain-text title (a few words, no punctuation-heavy "
+        "phrasing) summarizing the analysis — no markdown, no quotes, no fences, "
+        "no explanation."
+    ),
+    "dropdown_input": (
+        "You are choosing the static options for a dropdown input block in an "
+        "onchain analytics notebook, based on the task. "
+        "Return ONLY a short list of relevant options, one per line, plain text — "
+        "no numbering, no bullets, no markdown, no explanation."
+    ),
+    "input": (
+        "You are choosing a static default value for a text input block in an "
+        "onchain analytics notebook, based on the task. "
+        "Return ONLY the value as plain text — no quotes, no markdown, "
+        "no explanation."
+    ),
+    "date_input": (
+        "You are choosing a static default date for a date input block in an "
+        "onchain analytics notebook, based on the task. "
+        "Return ONLY a date in YYYY/MM/DD format — no time, no other text, "
+        "no explanation."
+    ),
 }

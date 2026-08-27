@@ -43,13 +43,43 @@ def _user_message(
             parts.append(f"**{k}:** {v}")
 
     for idx in block.depends_on:
-        if idx < len(prior_blocks):
-            dep = prior_blocks[idx]
+        if idx >= len(prior_blocks):
+            continue
+        dep = prior_blocks[idx]
+        parts.append(
+            f"**Preceding block ({dep.title}):**\n```\n{dep.content[:1500]}\n```"
+        )
+        if dep.type == "sql" and dep.dataframe_name:
+            # The dependency already ran against Dune (or a prior local step) and
+            # its result is sitting in this same session as a DataFrame — point
+            # the model at it by name instead of letting it re-fetch from Dune.
             parts.append(
-                f"**Preceding block ({dep.title}):**\n```\n{dep.content[:1500]}\n```"
+                f"The result of the preceding block above is already loaded in this "
+                f"session as a table/DataFrame named `{dep.dataframe_name}`. Query it "
+                f"directly (e.g. `SELECT ... FROM {dep.dataframe_name} ...`) — do not "
+                f"re-fetch this data from Dune."
             )
 
     return "\n\n".join(parts)
+
+
+def _dataframe_name(job_id: str | None, index: int) -> str:
+    # A short, valid-identifier, per-job-unique name so a downstream block can
+    # reference a preceding SQL block's result without colliding with any
+    # dataframeName a human (or an earlier AI run) already has in the doc.
+    token = re.sub(r"[^a-zA-Z0-9]", "", job_id or "")[:8] or "adhoc"
+    return f"aiq_{token}_{index}"
+
+
+def _sql_data_source(block: PlannedBlock, plan: BlockPlan) -> str:
+    # If this query depends on another SQL block, that block's result is
+    # already sitting in the session as a DataFrame — manipulate it locally
+    # with DuckDB rather than hitting Dune again. Otherwise it's an initial
+    # data pull, which only Dune (the Trino-backed source) can serve.
+    for idx in block.depends_on:
+        if idx < len(plan.blocks) and plan.blocks[idx].type == "sql":
+            return "duckdb"
+    return "dune"
 
 
 class BlockActionService:
@@ -61,7 +91,9 @@ class BlockActionService:
     async def generate_blocks(self, plan: BlockPlan, intent: Intent) -> list[GeneratedBlock]:
         generated: list[GeneratedBlock] = []
 
-        for block in plan.blocks:
+        job_id = self.envelope.job_id if self.envelope else None
+
+        for index, block in enumerate(plan.blocks):
             generated_block = GeneratedBlock(
                 type=block.type,
                 title=block.title,
@@ -69,6 +101,10 @@ class BlockActionService:
                 content="",
                 depends_on=block.depends_on,
             )
+
+            if block.type == "sql":
+                generated_block.data_source = _sql_data_source(block, plan)
+                generated_block.dataframe_name = _dataframe_name(job_id, index)
 
             if self.envelope:
                 await self.envelope.block_generating(generated_block.id, block.type, block.title)
@@ -78,7 +114,8 @@ class BlockActionService:
             elif block.type in NO_CONTENT_TYPES:
                 content = ""
             else:
-                system = SYSTEM_PROMPTS[block.type]
+                prompt_key = "sql_duckdb" if generated_block.data_source == "duckdb" else block.type
+                system = SYSTEM_PROMPTS[prompt_key]
                 user = _user_message(block, intent, generated)
 
                 response = await self.llm.ainvoke([
@@ -91,7 +128,11 @@ class BlockActionService:
             generated.append(generated_block)
 
             if self.envelope:
-                await self.envelope.block_ready(generated_block.id, block.type, block.title, content)
+                await self.envelope.block_ready(
+                    generated_block.id, block.type, block.title, content,
+                    data_source=generated_block.data_source,
+                    dataframe_name=generated_block.dataframe_name,
+                )
 
         return generated
 

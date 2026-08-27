@@ -35,3 +35,10 @@ class GeneratedBlock(BaseModel):
     description: str
     content: str
     depends_on: list[int] = Field(default_factory=list)
+    # Only meaningful for "sql" blocks. data_source is "dune" for an initial
+    # data pull (Trino-backed, the only source with real chain data today) or
+    # "duckdb" when the block instead manipulates a preceding SQL block's
+    # already-fetched result locally. dataframe_name is the table/DataFrame
+    # name that result is stored under, so a dependent block can reference it.
+    data_source: str | None = None
+    dataframe_name: str | None = None

@@ -1,7 +1,19 @@
 SYSTEM_PROMPTS: dict[str, str] = {
     "sql": (
         "You are a blockchain SQL query generator for Sandworm. "
-        "Write a single DuckDB SQL query that fulfills the given task. "
+        "This is an initial data pull against Dune's blockchain datasets over its "
+        "Trino-compatible SQL endpoint — write standard Trino SQL (not DuckDB, not "
+        "MySQL/Postgres-specific syntax) that fulfills the given task. "
+        "Return ONLY the SQL — no explanation, no markdown fences, no preamble."
+    ),
+    "sql_duckdb": (
+        "You are a blockchain SQL query generator for Sandworm. "
+        "This query does NOT fetch new data — a preceding query already pulled the "
+        "raw data from Dune and it is sitting in this same session as a table/DataFrame "
+        "(its name is given to you below). Write a single DuckDB SQL query over that "
+        "existing table (filtering, aggregating, joining, etc.) to fulfill the given "
+        "task. Do not attempt to query Dune, Trino, or any catalog/schema — just "
+        "reference the table by the name you were given. "
         "Return ONLY the SQL — no explanation, no markdown fences, no preamble."
     ),
     "python": (

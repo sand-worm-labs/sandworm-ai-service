@@ -59,7 +59,11 @@ class StreamEnvelope:
             },
         })
 
-    async def block_ready(self, block_id: str, block_type: str, block_title: str, content: str) -> None:
+    async def block_ready(
+        self, block_id: str, block_type: str, block_title: str, content: str,
+        data_source: str | None = None,
+        dataframe_name: str | None = None,
+    ) -> None:
         index = self._open_blocks.pop(block_id, None)
         if index is None:
             return
@@ -73,6 +77,8 @@ class StreamEnvelope:
                 "block_type": block_type,
                 "block_title": block_title,
                 "content": content,
+                "data_source": data_source,
+                "dataframe_name": dataframe_name,
             },
         })
         await self._emit({"type": "content_block_stop", "index": index})

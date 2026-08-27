@@ -64,6 +64,8 @@ async def test_block_generating_then_ready_reuse_same_index(envelope, publish):
         "block_type": "sql",
         "block_title": "Top holders",
         "content": "SELECT 1",
+        "data_source": None,
+        "dataframe_name": None,
     }
     assert stop_call == {"type": "content_block_stop", "index": 0}
 

@@ -35,6 +35,9 @@ def _intent_summary(req: PlanBlocksRequest) -> str:
     return "\n".join(parts)
 
 
+MAX_PLAN_ATTEMPTS = 3
+
+
 def _parse_plan(raw_content: str) -> BlockPlan:
     # Pre-parse (strip fences/prose, confirm it's a JSON object) before
     # spending a pydantic validation pass on it.
@@ -53,37 +56,42 @@ class PlanBlocksService:
             HumanMessage(content=_intent_summary(self.req)),
         ]
 
-        response = await self.llm.ainvoke(messages)
-        try:
-            return _parse_plan(response.content)
-        except (LLMJSONError, ValidationError) as exc:
-            log.warning(
-                "block plan not valid JSON on first attempt (%s); retrying. raw=%r",
-                exc, response.content[:2000],
-            )
+        last_exc: Exception | None = None
+        response = None
 
-        # One retry with the model's own bad output in context — LLMs usually
-        # self-correct a formatting slip when told exactly what was wrong.
-        retry_messages = [
-            *messages,
-            response,
-            HumanMessage(
-                content=(
-                    "That response was not valid JSON matching the schema. "
-                    "Return ONLY the JSON object — no markdown fences, no explanation."
+        for attempt in range(1, MAX_PLAN_ATTEMPTS + 1):
+            response = await self.llm.ainvoke(messages)
+            try:
+                return _parse_plan(response.content)
+            except (LLMJSONError, ValidationError) as exc:
+                last_exc = exc
+                log.warning(
+                    "block plan not valid JSON on attempt %d/%d (%s); raw=%r",
+                    attempt, MAX_PLAN_ATTEMPTS, exc, response.content[:2000],
                 )
-            ),
-        ]
-        response = await self.llm.ainvoke(retry_messages)
-        try:
-            return _parse_plan(response.content)
-        except (LLMJSONError, ValidationError) as exc:
-            # Degrade instead of failing the whole chat turn: no blocks get
-            # planned, but node_complete still runs and the user gets a real
-            # (text-only) response rather than a raw JSON error in the chat.
-            log.error(
-                "block plan not valid JSON after retry (%s); falling back to an "
-                "empty plan. raw=%r",
-                exc, response.content[:2000],
-            )
-            return BlockPlan(blocks=[])
+                if attempt == MAX_PLAN_ATTEMPTS:
+                    break
+
+                # Feed the model its own bad output back with a corrective
+                # instruction — LLMs usually self-correct a formatting slip
+                # when told exactly what was wrong — then loop and try again.
+                messages = [
+                    *messages,
+                    response,
+                    HumanMessage(
+                        content=(
+                            "That response was not valid JSON matching the schema. "
+                            "Return ONLY the JSON object — no markdown fences, no explanation."
+                        )
+                    ),
+                ]
+
+        # Stop instead of failing the whole chat turn: no blocks get planned,
+        # but node_complete still runs and the user gets a real (text-only)
+        # response rather than a raw JSON error in the chat.
+        log.error(
+            "block plan not valid JSON after %d attempts (%s); falling back to "
+            "an empty plan. raw=%r",
+            MAX_PLAN_ATTEMPTS, last_exc, response.content[:2000] if response else None,
+        )
+        return BlockPlan(blocks=[])

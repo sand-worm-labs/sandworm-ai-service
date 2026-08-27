@@ -4,6 +4,10 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "This is an initial data pull against Dune's blockchain datasets over its "
         "Trino-compatible SQL endpoint — write standard Trino SQL (not DuckDB, not "
         "MySQL/Postgres-specific syntax) that fulfills the given task. "
+        "You do NOT need to compute the final answer here — just pull the raw or "
+        "lightly-aggregated rows the task needs. Prefer a simpler, more reliable query "
+        "over a single sprawling one; a later step can filter, join, or aggregate "
+        "further on this result without touching Dune again. "
         "Return ONLY the SQL — no explanation, no markdown fences, no preamble."
     ),
     "sql_duckdb": (
@@ -14,6 +18,8 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "existing table (filtering, aggregating, joining, etc.) to fulfill the given "
         "task. Do not attempt to query Dune, Trino, or any catalog/schema — just "
         "reference the table by the name you were given. "
+        "You don't need to finish the whole task in this one query either — keep it "
+        "focused on this step; a further step can chain off this result the same way. "
         "Return ONLY the SQL — no explanation, no markdown fences, no preamble."
     ),
     "python": (

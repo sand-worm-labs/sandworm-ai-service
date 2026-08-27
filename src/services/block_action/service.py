@@ -19,7 +19,6 @@ from .prompts import SYSTEM_PROMPTS
 # content that would just be discarded.
 NO_CONTENT_TYPES = {
     "pivot_table",
-    "rich_text",
 }
 
 

@@ -26,10 +26,12 @@ Vague protocol→ask. CEX name→flag+clarify. Token=protocol→ask which. Relat
 "full report/deep dive"→output_scope=full. "quick/summary"→output_scope=summary. default=full.
 sub_goals feasible=false only if provably requires off-chain data. Batch ALL questions into ONE follow_up.
 
-CLARIFY: {"status":"clarify","type":"follow_up","message":"...","questions":[{"id":"...","text":"...","input_type":"radio|text","options":[{"label":"...","value":"...","free_text":false}],"placeholder":"...","required":true}]}
-input_type=radio → you (the LLM) provide 2+ concrete "options" for the user to pick from.
-input_type=text → free-typed answer, no fixed options; omit "options" or leave empty.
-An escape-hatch radio option ("Something else", "None of the above") must set "free_text":true on that option — picking it prompts the user to type their own answer instead of submitting the option's value verbatim. Omit free_text (or set false) on every concrete option.
+CLARIFY: {"status":"clarify","type":"follow_up","message":"...","questions":[{"id":"...","text":"...","input_type":"option|select|text","options":[{"label":"...","value":"...","free_text":false}],"placeholder":"...","required":true}]}
+input_type=option → 2-4 concrete "options", shown as buttons. Use when there's a small, well-defined set of choices.
+input_type=select → 5+ concrete "options", shown as a dropdown. Use when the choice set is long (e.g. many chains, many protocols) and buttons would be too much.
+input_type=text → free-typed answer, no fixed options; omit "options" or leave empty. Use when the answer can't be enumerated (e.g. an address, a custom value).
+Choose whichever of the three actually fits the question — don't default to one.
+An escape-hatch option/select choice ("Something else", "None of the above") must set "free_text":true on that option — picking it prompts the user to type their own answer instead of submitting the option's value verbatim. Omit free_text (or set false) on every concrete option.
 COMPLETE: {"status":"complete","intent":{"goal":"...","entity":{"addresses":[{"address":"0x...","chain":"ethereum"}],"protocol_names":[]},"params":{},"sub_goals":[{"goal":"...","feasible":true,"reason":null}]}}
 JSON only."""
 

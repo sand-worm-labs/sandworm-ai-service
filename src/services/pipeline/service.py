@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from src.config.settings import settings
 from src.models.base import ChatContext
 from src.util.cache import clear_active_job
+from src.util.llm_json import LLMJSONError, parse_json_object
 from src.util.stream_events import StreamEnvelope
 from src.services.completions.service import CompletionService
 from src.services.completions.models import CompletionRequest, Message
@@ -19,6 +20,8 @@ from src.services.block_planner.service import PlanBlocksService
 from src.services.block_planner.models import PlanBlocksRequest, BlockPlan
 from src.services.block_action.service import BlockActionService
 from src.services.block_action.model import GeneratedBlock
+
+log = logging.getLogger("sandworm.pipeline")
 
 
 @dataclass
@@ -60,14 +63,17 @@ async def node_parse_intent(state: PipelineState, envelope: StreamEnvelope) -> P
         raw += chunk
 
     try:
-        data = json.loads(raw)
+        # Pre-parse (strip fences/prose, confirm it's a JSON object) before
+        # trusting its shape.
+        data = parse_json_object(raw)
         state.parsed_intent = ParsedIntent(
             intent_class=IntentClass(data.get("intent_class", "analytical")),
             intent_status=data.get("intent_status", "error"),
             intent=data.get("intent"),
             references_block=data.get("references_block", False),
         )
-    except (json.JSONDecodeError, ValueError):
+    except (LLMJSONError, ValueError) as exc:
+        log.warning("intent parse not valid JSON (%s); raw=%r", exc, raw[:2000])
         state.parsed_intent = ParsedIntent(
             intent_class=IntentClass.ANALYTICAL,
             intent_status="error",
@@ -166,7 +172,11 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
             state = await node_plan_blocks(state)
             duration_ms = int((time.monotonic() - planning_start) * 1000)
             block_summaries = ", ".join(f"{b.type}: {b.title}" for b in state.block_plan.blocks)
-            thinking = f"Planning {len(state.block_plan.blocks)} block(s): {block_summaries}"
+            thinking = (
+                f"Planning {len(state.block_plan.blocks)} block(s): {block_summaries}"
+                if state.block_plan.blocks
+                else "Couldn't plan any blocks for this — answering directly instead"
+            )
             await envelope.thinking(thinking, duration_ms)
 
             state = await node_generate_blocks(state, envelope)

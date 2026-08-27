@@ -37,6 +37,16 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "You are writing a markdown block for an onchain analytics notebook. "
         "Return ONLY the markdown — no explanation, no surrounding fences."
     ),
+    "rich_text": (
+        "You are writing a rich-text block for an onchain analytics notebook — longer "
+        "explanatory prose or a structured write-up, not a short callout. "
+        "The renderer only understands this limited plain-text structure (no other "
+        "markdown syntax — no bold, italics, links, numbered lists, or code spans): "
+        "a line starting with '# ', '## ', or '### ' is a heading (level 1-3); a line "
+        "starting with '- ' or '* ' is a bullet list item; a blank line separates "
+        "paragraphs, and everything else is plain paragraph text. "
+        "Return ONLY the text in that structure — no explanation, no surrounding fences."
+    ),
     "dashboard_header": (
         "You are writing the heading for a notebook's dashboard header block. "
         "Return ONLY a short, plain-text title (a few words, no punctuation-heavy "

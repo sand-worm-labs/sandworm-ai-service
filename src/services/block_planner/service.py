@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import json
-import re
+import logging
 
+from pydantic import ValidationError
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
+from src.util.llm_json import LLMJSONError, parse_json_object
 
 from .models import PlanBlocksRequest, BlockPlan
 from .prompts import SYSTEM_PROMPT
+
+log = logging.getLogger("sandworm.block_planner")
 
 
 def _intent_summary(req: PlanBlocksRequest) -> str:
@@ -31,6 +35,13 @@ def _intent_summary(req: PlanBlocksRequest) -> str:
     return "\n".join(parts)
 
 
+def _parse_plan(raw_content: str) -> BlockPlan:
+    # Pre-parse (strip fences/prose, confirm it's a JSON object) before
+    # spending a pydantic validation pass on it.
+    data = parse_json_object(raw_content)
+    return BlockPlan.model_validate(data)
+
+
 class PlanBlocksService:
     def __init__(self, req: PlanBlocksRequest):
         self.llm = make_llm(req.openrouter_api_key, req.model)
@@ -41,6 +52,38 @@ class PlanBlocksService:
             SystemMessage(content=SYSTEM_PROMPT),
             HumanMessage(content=_intent_summary(self.req)),
         ]
+
         response = await self.llm.ainvoke(messages)
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.content.strip())
-        return BlockPlan.model_validate(json.loads(raw))
+        try:
+            return _parse_plan(response.content)
+        except (LLMJSONError, ValidationError) as exc:
+            log.warning(
+                "block plan not valid JSON on first attempt (%s); retrying. raw=%r",
+                exc, response.content[:2000],
+            )
+
+        # One retry with the model's own bad output in context — LLMs usually
+        # self-correct a formatting slip when told exactly what was wrong.
+        retry_messages = [
+            *messages,
+            response,
+            HumanMessage(
+                content=(
+                    "That response was not valid JSON matching the schema. "
+                    "Return ONLY the JSON object — no markdown fences, no explanation."
+                )
+            ),
+        ]
+        response = await self.llm.ainvoke(retry_messages)
+        try:
+            return _parse_plan(response.content)
+        except (LLMJSONError, ValidationError) as exc:
+            # Degrade instead of failing the whole chat turn: no blocks get
+            # planned, but node_complete still runs and the user gets a real
+            # (text-only) response rather than a raw JSON error in the chat.
+            log.error(
+                "block plan not valid JSON after retry (%s); falling back to an "
+                "empty plan. raw=%r",
+                exc, response.content[:2000],
+            )
+            return BlockPlan(blocks=[])

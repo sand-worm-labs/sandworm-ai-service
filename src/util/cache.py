@@ -53,3 +53,19 @@ async def publish_job_event(job_id: str, event: dict[str, Any], chat_id: str | N
 async def get_job_events(job_id: str) -> list[dict[str, Any]]:
     raw = await get_redis().lrange(f"{JOB_KEY_PREFIX}:{job_id}:events", 0, -1)
     return [json.loads(r) for r in raw]
+
+
+# The other half of the block-result handoff — Node RPUSHes here
+# (AiBlockEventService.publishBlockResult) once a block it just ran reaches a
+# terminal state (success, or gives up after exhausting auto-fix retries).
+# BLPOP rather than pub/sub: it still finds the value even if the push
+# happened slightly before we started waiting, which pub/sub would drop.
+async def wait_for_block_result(block_id: str, timeout: int = 60) -> dict[str, Any] | None:
+    result = await get_redis().blpop(f"block:result:{block_id}", timeout=timeout)
+    if result is None:
+        return None
+    _, payload = result
+    try:
+        return json.loads(payload)
+    except (json.JSONDecodeError, TypeError):
+        return None

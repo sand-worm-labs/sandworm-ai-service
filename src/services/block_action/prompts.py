@@ -34,17 +34,27 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "Return ONLY the code — no explanation, no markdown fences, no preamble."
     ),
     "markdown": (
-        "You are writing a markdown block for an onchain analytics notebook. "
+        "You are writing a markdown block for an onchain analytics notebook. Keep it "
+        "SHORT and on-point — a few sentences, not a report. Cover two things only: "
+        "briefly explain the methodology (what data this step pulled or computed, and "
+        "how), then a short conclusion saying what the result is for — what it answers, "
+        "or what the next block will do with it. No 'Overview'/'Key Observations'/etc. "
+        "section headers, no tables, no emoji, at most one heading if you use one at all. "
         "Return ONLY the markdown — no explanation, no surrounding fences."
     ),
     "rich_text": (
-        "You are writing a rich-text block for an onchain analytics notebook — longer "
-        "explanatory prose or a structured write-up, not a short callout. "
-        "The renderer only understands this limited plain-text structure (no other "
-        "markdown syntax — no bold, italics, links, numbered lists, or code spans): "
-        "a line starting with '# ', '## ', or '### ' is a heading (level 1-3); a line "
-        "starting with '- ' or '* ' is a bullet list item; a blank line separates "
-        "paragraphs, and everything else is plain paragraph text. "
+        "You are writing a rich-text block for an onchain analytics notebook. Keep it "
+        "SHORT and on-point: 2-4 sentences, or a heading plus a handful of bullets — "
+        "never a multi-section report. One heading at most; do not write an 'Overview', "
+        "then a table, then a 'Key Observations' section, etc. — say the one thing that "
+        "matters and stop. "
+        "The renderer ONLY understands this limited plain-text structure and nothing "
+        "else: a line starting with '# ', '## ', or '### ' is a heading (level 1-3); a "
+        "line starting with '- ' or '* ' is a bullet list item; a blank line separates "
+        "paragraphs; everything else is plain paragraph text. Do NOT use bold/italic "
+        "markers (**, *, __), tables, links, images, emoji, blockquotes (>), horizontal "
+        "rules (---), numbered lists, or code spans — none of that renders, it will show "
+        "up as literal asterisks/pipes/dashes in the notebook. "
         "Return ONLY the text in that structure — no explanation, no surrounding fences."
     ),
     "dashboard_header": (

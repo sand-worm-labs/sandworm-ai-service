@@ -63,6 +63,7 @@ class StreamEnvelope:
         self, block_id: str, block_type: str, block_title: str, content: str,
         data_source: str | None = None,
         dataframe_name: str | None = None,
+        action: str = "ran",
     ) -> None:
         index = self._open_blocks.pop(block_id, None)
         if index is None:
@@ -72,7 +73,7 @@ class StreamEnvelope:
             "index": index,
             "delta": {
                 "type": "block_action_delta",
-                "action": "ran",
+                "action": action,
                 "block_id": block_id,
                 "block_type": block_type,
                 "block_title": block_title,

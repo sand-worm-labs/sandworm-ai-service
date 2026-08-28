@@ -40,6 +40,9 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "how), then a short conclusion saying what the result is for — what it answers, "
         "or what the next block will do with it. No 'Overview'/'Key Observations'/etc. "
         "section headers, no tables, no emoji, at most one heading if you use one at all. "
+        "The notebook's own title/dashboard header already states the overall analysis "
+        "topic — if you use a heading, make it about THIS block's specific content, "
+        "never a restatement of that overall topic. "
         "Return ONLY the markdown — no explanation, no surrounding fences."
     ),
     "rich_text": (
@@ -47,7 +50,9 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "SHORT and on-point: 2-4 sentences, or a heading plus a handful of bullets — "
         "never a multi-section report. One heading at most; do not write an 'Overview', "
         "then a table, then a 'Key Observations' section, etc. — say the one thing that "
-        "matters and stop. "
+        "matters and stop. The notebook's own title/dashboard header already states the "
+        "overall analysis topic — if you use a heading, make it about THIS block's "
+        "specific content (e.g. 'Key Insights'), never a restatement of that topic. "
         "The renderer ONLY understands this limited plain-text structure and nothing "
         "else: a line starting with '# ', '## ', or '### ' is a heading (level 1-3); a "
         "line starting with '- ' or '* ' is a bullet list item; a blank line separates "

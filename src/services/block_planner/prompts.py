@@ -29,7 +29,7 @@ RULES:
 2. A visualization or pivot_table block must always follow a sql or python block it depends on — set depends_on to that block's 0-based index.
 3. For a further transformation on a prior SQL block's result, prefer a second sql block that depends_on it (a local follow-up query) over a python block, unless the transformation genuinely needs pandas/numpy (e.g. a statistical model, a rolling window, logic no SQL can express cleanly).
 11. Don't cram a whole sub-goal into one sql block. If it naturally breaks into a raw data pull plus separate filtering/joining/aggregation/metric steps, plan it as multiple chained sql blocks (each depends_on the one before it) rather than one large query — smaller, focused queries are more likely to actually work.
-4. Open with a dashboard_header block that titles the analysis when the plan has 3+ other blocks.
+4. Open with a dashboard_header block that titles the analysis when the plan has 3+ other blocks. When you do, that block IS the title — no other block (markdown, rich_text, or otherwise) should restate the analysis topic as its own heading; give them distinct titles describing what THEY specifically cover (e.g. "Key Insights", "Methodology"), not a repeat of the overall subject.
 5. Each sql/python block may be followed by at most one visualization block.
 6. Sub-goals marked feasible:false must be skipped entirely — do not create blocks for them.
 7. Place interactive blocks (input, dropdown_input, date_input) at the top before any sql blocks when the analysis benefits from user-controlled filtering.

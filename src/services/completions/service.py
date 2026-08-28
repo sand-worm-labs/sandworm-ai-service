@@ -5,6 +5,7 @@ from typing import AsyncIterator
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from src.providers.openrouter import make_streaming_llm
 from .models import CompletionRequest
+from .prompts import SYSTEM_PROMPT
 
 
 class CompletionService:
@@ -20,6 +21,8 @@ class CompletionService:
 
         if input.derived_context:
             messages = [SystemMessage(content=input.derived_context), *messages]
+
+        messages = [SystemMessage(content=SYSTEM_PROMPT), *messages]
             
         async for chunk in llm.astream(messages):
             if chunk.content:

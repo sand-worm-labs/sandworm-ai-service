@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
 from src.services.sandworm_tools.service import SandwormToolsService
-from src.util.cache import wait_for_block_result
+from src.util.cache import is_job_cancelled, wait_for_block_result
 from src.util.stream_events import StreamEnvelope
 
 from src.services.block_planner.models import BlockPlan, PlannedBlock
 from src.services.intent.models import Intent
 from .model import GeneratedBlock
 from .prompts import SYSTEM_PROMPTS
+
+log = logging.getLogger("sandworm.block_action")
 
 # How long to wait for a dependency block's real execution result before
 # giving up and falling back to generating off its code alone. Node's own
@@ -34,16 +37,52 @@ NO_CONTENT_TYPES = {
 }
 
 
+_DATAFRAMES_SECTION_RE = re.compile(r"## DATAFRAMES\n\n(.*?)(?=\n\n## |\Z)", re.DOTALL)
+
+
+def _existing_dataframes(notebook_markdown: str | None) -> str:
+    # Node's DuckDB executor already lets *any* query reference *any*
+    # dataframe already in this document by name — it self-heals missing
+    # globals by reloading from disk (see knownDataframes in
+    # duckdb-query.service.ts). The model just needs to be told these exist;
+    # docToMarkdown already computed this exact list for the chat context.
+    if not notebook_markdown:
+        return ""
+    match = _DATAFRAMES_SECTION_RE.search(notebook_markdown)
+    return match.group(1).strip() if match else ""
+
+
+_DATAFRAME_NAME_RE = re.compile(r"\*\*([A-Za-z_][A-Za-z0-9_]*)\*\*")
+
+
+def _dataframe_names_in_text(text: str) -> set[str]:
+    return set(_DATAFRAME_NAME_RE.findall(text))
+
+
+def _references_dataframe(sql: str, known_names: set[str]) -> bool:
+    return any(
+        re.search(rf"\b{re.escape(name)}\b", sql) for name in known_names
+    )
+
+
 def _user_message(
     block: PlannedBlock,
     intent: Intent,
     prior_blocks: list[GeneratedBlock],
     block_results: dict[int, dict | None] | None = None,
+    existing_dataframes: str = "",
 ) -> str:
     parts: list[str] = [
         f"**Analytical goal:** {intent.goal}",
         f"**Task:** {block.description}",
     ]
+
+    if existing_dataframes and block.type in ("sql", "python"):
+        parts.append(
+            "**Dataframes already available in this notebook's session** (query "
+            "any of these directly by name instead of re-fetching the same data "
+            f"— they exist regardless of depends_on):\n{existing_dataframes}"
+        )
 
     if intent.entity.addresses:
         addrs = ", ".join(f"{a.address} ({a.chain})" for a in intent.entity.addresses)
@@ -104,15 +143,17 @@ def _dataframe_name(job_id: str | None, index: int) -> str:
     return f"aiq_{token}_{index}"
 
 
-def _sql_data_source(block: PlannedBlock, plan: BlockPlan) -> str:
-    # If this query depends on another SQL block, that block's result is
-    # already sitting in the session as a DataFrame — manipulate it locally
-    # with DuckDB rather than hitting Dune again. Otherwise it's an initial
-    # data pull, which only Dune (the Trino-backed source) can serve.
-    for idx in block.depends_on:
-        if idx < len(plan.blocks) and plan.blocks[idx].type == "sql":
-            return "duckdb"
-    return "dune"
+def _sql_data_source(content: str, known_names: set[str]) -> str:
+    # Routing is decided from what the model actually wrote, not from the
+    # planner's declared depends_on graph — depends_on only captures the
+    # dependency graph the planner thought to declare, but the model is told
+    # (in _user_message) it can reference *any* known dataframe by name
+    # regardless of depends_on, and it does. Trusting depends_on alone means
+    # any block the model routes to a dataframe without a matching depends_on
+    # entry gets sent to Trino, which can't resolve a pandas variable as a
+    # catalog table. The content is ground truth: if it names a known
+    # dataframe, it's a local DuckDB query; otherwise it's a fresh Dune pull.
+    return "duckdb" if _references_dataframe(content, known_names) else "dune"
 
 
 class BlockActionService:
@@ -121,15 +162,36 @@ class BlockActionService:
         self.envelope = envelope
         self.tools = SandwormToolsService()
 
-    async def generate_blocks(self, plan: BlockPlan, intent: Intent) -> list[GeneratedBlock]:
+    async def generate_blocks(
+        self,
+        plan: BlockPlan,
+        intent: Intent,
+        notebook_markdown: str | None = None,
+        chat_id: str | None = None,
+    ) -> list[GeneratedBlock]:
         generated: list[GeneratedBlock] = []
         # Real execution outcomes for already-generated blocks, keyed by their
         # index in plan.blocks — populated as we wait on each one's dependents.
         block_results: dict[int, dict | None] = {}
+        existing_dataframes = _existing_dataframes(notebook_markdown)
+        # Grows as sql blocks are generated below — depends_on only captures
+        # the dependency graph the planner declared, but (per _user_message's
+        # "existing dataframes" context) the model is free to reference *any*
+        # dataframe by name regardless of depends_on. Routing has to track
+        # what the model can actually see, not just the declared graph.
+        known_dataframe_names = _dataframe_names_in_text(existing_dataframes)
 
         job_id = self.envelope.job_id if self.envelope else None
 
         for index, block in enumerate(plan.blocks):
+            # Checked once per block rather than more granularly — a single
+            # block's own generation call is short enough that finishing it
+            # rather than interrupting mid-call is the simpler, still-responsive
+            # choice.
+            if chat_id is not None and await is_job_cancelled(chat_id):
+                log.info("block generation cancelled before block %d/%d", index + 1, len(plan.blocks))
+                return generated
+
             await self._await_dependency_results(block, generated, block_results)
 
             generated_block = GeneratedBlock(
@@ -141,7 +203,6 @@ class BlockActionService:
             )
 
             if block.type == "sql":
-                generated_block.data_source = _sql_data_source(block, plan)
                 generated_block.dataframe_name = _dataframe_name(job_id, index)
 
             if self.envelope:
@@ -152,15 +213,24 @@ class BlockActionService:
             elif block.type in NO_CONTENT_TYPES:
                 content = ""
             else:
-                prompt_key = "sql_duckdb" if generated_block.data_source == "duckdb" else block.type
-                system = SYSTEM_PROMPTS[prompt_key]
-                user = _user_message(block, intent, generated, block_results)
+                system = SYSTEM_PROMPTS[block.type]
+                user = _user_message(block, intent, generated, block_results, existing_dataframes)
 
                 response = await self.llm.ainvoke([
                     SystemMessage(content=system),
                     HumanMessage(content=user),
                 ])
                 content = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", response.content.strip())
+
+            if block.type == "sql":
+                generated_block.data_source = _sql_data_source(content, known_dataframe_names)
+                log.info(
+                    "sql block '%s' routed to %s | known_dataframes=%s | sql=%r",
+                    block.title, generated_block.data_source,
+                    sorted(known_dataframe_names), content[:500],
+                )
+                if generated_block.dataframe_name:
+                    known_dataframe_names.add(generated_block.dataframe_name)
 
             generated_block.content = content
             generated.append(generated_block)

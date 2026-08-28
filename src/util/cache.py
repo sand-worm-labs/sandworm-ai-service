@@ -44,6 +44,23 @@ async def clear_active_job(chat_id: str) -> None:
     await get_redis().delete(f"active_job:{chat_id}")
 
 
+# Same key ChatService.abort() sets (apps/api/.../chat.service.ts) and the
+# Node-side auto-fix loops check (ai-block-event.service.ts) — the one thing
+# all three have to agree on across the language boundary. Polled at
+# checkpoints throughout run_pipeline rather than pushed, since there's no
+# way to reach into an already-running asyncio background task from outside.
+def _cancel_job_key(chat_id: str) -> str:
+    return f"cancel_job:{chat_id}"
+
+
+async def is_job_cancelled(chat_id: str) -> bool:
+    return await get_redis().get(_cancel_job_key(chat_id)) is not None
+
+
+async def clear_job_cancel(chat_id: str) -> None:
+    await get_redis().delete(_cancel_job_key(chat_id))
+
+
 async def publish_job_event(job_id: str, event: dict[str, Any], chat_id: str | None = None) -> None:
     client = get_redis()
     if chat_id is not None:

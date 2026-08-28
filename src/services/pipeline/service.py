@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from src.config.settings import settings
 from src.models.base import ChatContext
-from src.util.cache import clear_active_job
+from src.util.cache import clear_active_job, clear_job_cancel, is_job_cancelled
 from src.util.llm_json import LLMJSONError, parse_json_object
 from src.util.stream_events import StreamEnvelope
 from src.services.completions.service import CompletionService
@@ -118,12 +118,15 @@ async def node_plan_blocks(state: PipelineState) -> PipelineState:
 
 async def node_generate_blocks(state: PipelineState, envelope: StreamEnvelope) -> PipelineState:
     intent = Intent.model_validate(state.parsed_intent.intent)
+    chat_id = state.context.chat_id if isinstance(state.context, ChatContext) else None
     service = BlockActionService(api_key=state.api_key, model=state.model, envelope=envelope)
-    state.generated_blocks = await service.generate_blocks(state.block_plan, intent)
+    state.generated_blocks = await service.generate_blocks(
+        state.block_plan, intent, state.notebook_markdown, chat_id=chat_id,
+    )
     return state
 
 
-async def node_complete(state: PipelineState, envelope: StreamEnvelope) -> PipelineState:
+async def node_complete(state: PipelineState, envelope: StreamEnvelope, chat_id: str | None) -> PipelineState:
     messages = state.messages
 
     if state.notebook_markdown:
@@ -140,12 +143,31 @@ async def node_complete(state: PipelineState, envelope: StreamEnvelope) -> Pipel
     )
 
     result = ""
+    chunk_count = 0
     async for chunk in CompletionService().stream(req):
+        # Checking Redis on every token would add real latency to the
+        # stream — every 20 chunks is frequent enough to feel responsive to
+        # an abort without hammering it.
+        chunk_count += 1
+        if chat_id is not None and chunk_count % 20 == 0 and await is_job_cancelled(chat_id):
+            log.info("pipeline cancelled mid-completion for chat_id=%s", chat_id)
+            state.output = result
+            return state
+
         result += chunk
         await envelope.text_delta(chunk)
 
     state.output = result
     return state
+
+
+async def _stop_if_cancelled(chat_id: str | None, envelope: StreamEnvelope, where: str) -> bool:
+    if chat_id is None or not await is_job_cancelled(chat_id):
+        return False
+
+    log.info("pipeline cancelled at %s for chat_id=%s", where, chat_id)
+    await envelope.message_stop()
+    return True
 
 
 async def run_pipeline(state: PipelineState) -> PipelineState:
@@ -154,6 +176,9 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
     envelope = StreamEnvelope(job_id=job_id, chat_id=chat_id)
     try:
         await envelope.message_start()
+
+        if await _stop_if_cancelled(chat_id, envelope, "start"):
+            return state
 
         state = await node_parse_intent(state, envelope)
         if not state.parsed_intent.is_complete:
@@ -165,9 +190,15 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
             await envelope.message_stop()
             return state
 
+        if await _stop_if_cancelled(chat_id, envelope, "after intent parsing"):
+            return state
+
         state = await node_fetch_notebook_context(state)
 
         if state.parsed_intent.intent_class in (IntentClass.ANALYTICAL, IntentClass.EDITORIAL):
+            if await _stop_if_cancelled(chat_id, envelope, "after notebook context"):
+                return state
+
             planning_start = time.monotonic()
             state = await node_plan_blocks(state)
             duration_ms = int((time.monotonic() - planning_start) * 1000)
@@ -179,9 +210,15 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
             )
             await envelope.thinking(thinking, duration_ms)
 
+            if await _stop_if_cancelled(chat_id, envelope, "after planning"):
+                return state
+
             state = await node_generate_blocks(state, envelope)
 
-        state = await node_complete(state, envelope)
+            if await _stop_if_cancelled(chat_id, envelope, "after block generation"):
+                return state
+
+        state = await node_complete(state, envelope, chat_id)
         await envelope.message_stop()
         return state
 
@@ -191,3 +228,4 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
     finally:
         if chat_id is not None:
             await clear_active_job(chat_id)
+            await clear_job_cancel(chat_id)

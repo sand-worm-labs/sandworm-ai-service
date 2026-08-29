@@ -1,0 +1,125 @@
+{"n":1,"class":"analytical","status":"complete","detail":"vitalik.eth resolves to ethereum; metric=ETH balance, current","gap":false,"reason":"Well-known ENS individual resolves to ethereum with no ask; balance is a concrete metric."}
+{"n":2,"class":"analytical","status":"complete","detail":"chain=polygon (matic); metric=gas fees, today","gap":false,"reason":"Chain-wide gas metric with named chain proceeds per rule 1."}
+{"n":3,"class":"analytical","status":"complete","detail":"protocol=aave; metric=TVL, current","gap":false,"reason":"Well-known protocol, concrete metric, no ask needed."}
+{"n":4,"class":"analytical","status":"complete","detail":"token=UNI; metric=holder count","gap":false,"reason":"Holder count unambiguously refers to the token, not the protocol."}
+{"n":5,"class":"analytical","status":"clarify","detail":"ask which chain the address 0x9F8b...a3D6E is on","gap":false,"reason":"Address given with no chain triggers the non-negotiable chain-ask rule."}
+{"n":6,"class":"analytical","status":"complete","detail":"chain=arbitrum; metric=swap/gas fees (cheapness)","gap":false,"reason":"Concrete metric (cheap swaps=fees) named with a specific chain, not a vague health ask."}
+{"n":7,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Pure definitional question, no data pull."}
+{"n":8,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Known security-incident factual question about a named entity, per explicit carve-out."}
+{"n":9,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"General 'how do I check' methodology question, no specific token or data pull requested."}
+{"n":10,"class":"analytical","status":"clarify","detail":"ask wallet address and which specific metric ('something off') to check","gap":false,"reason":"No address given for 'my wallet' and the concern is vague/unmeasurable with no scope signal."}
+{"n":11,"class":"analytical","status":"complete","detail":"sector=DeFi lending; leaderboard/comparison of top lending protocols by TVL/volume","gap":false,"reason":"Whole sector with no single entity named decomposes into a comparison per rule 6."}
+{"n":12,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional question about token vs protocol, no data pull."}
+{"n":13,"class":"analytical","status":"clarify","detail":"ask wallet address (timeframe already resolved to last week)","gap":false,"reason":"'My portfolio' has no address given."}
+{"n":14,"class":"analytical","status":"clarify","detail":"ask wallet address; scope resolved to summary/headline metrics via 'quick'","gap":false,"reason":"Address still required even though scope signal resolves the vague metric."}
+{"n":15,"class":"analytical","status":"complete","detail":"protocol=friend.tech; rug-risk bundle (liquidity lock, holder concentration, contract permissions)","gap":false,"reason":"'Is X legit' routes to rug-risk bundle for a well-known protocol, no ask needed."}
+{"n":16,"class":"analytical","status":"complete","detail":"address=0x9F8b...a3D6E, chain=ethereum; metric=transactions, default recent window","gap":false,"reason":"Address and chain both given."}
+{"n":17,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional question."}
+{"n":18,"class":"analytical","status":"clarify","detail":"ask for the transaction hash or wallet address and chain","gap":false,"reason":"No tx/wallet identifier given and not chain-wide."}
+{"n":19,"class":"analytical","status":"complete","detail":"chains=bsc vs ethereum; metric=gas fees comparison","gap":false,"reason":"Chain-wide metric with two named chains, concrete metric stated."}
+{"n":20,"class":"analytical","status":"clarify","detail":"ask friend's wallet address (and chain)","gap":false,"reason":"Named individual with no address given."}
+{"n":21,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"Personal decision/advice ask ('should I'), not a metric request."}
+{"n":22,"class":"analytical","status":"complete","detail":"token=LDO; metric=top holder wallet, current","gap":false,"reason":"Well-known token, concrete metric."}
+{"n":23,"class":"analytical","status":"complete","detail":"protocol=Lido; rug-risk/safety bundle (liquidity lock, holder concentration, contract permissions)","gap":false,"reason":"'Is X safe' routes to the rug-risk bundle per classifier; bundle is a loose semantic fit for staking-specific risk but is the prescribed handling."}
+{"n":24,"class":"analytical","status":"complete","detail":"entity=Arbitrum DAO; governance health bundle (voter turnout, delegate concentration, proposal pass rate)","gap":false,"reason":"Governance activity question maps to the named governance-health bundle."}
+{"n":25,"class":"analytical","status":"clarify","detail":"ask wallet address (multi-chain unified already implied by 'all chains')","gap":false,"reason":"'My wallet' has no address given."}
+{"n":26,"class":"analytical","status":"clarify","detail":"ask which chain/wallet — Binance operates multiple per-chain hot wallets","gap":false,"reason":"CEX wallet needs distinguishing across chains before withdrawal delays can be examined."}
+{"n":27,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional product-comparison question (Coinbase Wallet vs exchange), no data pull."}
+{"n":28,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional DAO-voting term question."}
+{"n":29,"class":"analytical","status":"clarify","detail":"ask wallet address (timeframe resolved to last month)","gap":false,"reason":"'My wallet' has no address given."}
+{"n":30,"class":"analytical","status":"complete","detail":"entity=MakerDAO; sub_goal=current governance/voting activity status","gap":true,"reason":"Reading 'can holders still vote' as a governance-activity data pull rather than a mechanism/definitional question is a judgment call."}
+{"n":31,"class":"analytical","status":"clarify","detail":"ask sender wallet address, destination address, and chain","gap":false,"reason":"Trace request has no address or chain given."}
+{"n":32,"class":"analytical","status":"complete","detail":"sector=NFT market; aggregate/leaderboard trading volume, default recent window","gap":false,"reason":"Concrete metric (volume) for a whole category decomposes into aggregate/leaderboard per rule 6."}
+{"n":33,"class":"analytical","status":"clarify","detail":"ask which L2's DAO is meant (Arbitrum, Optimism, etc.)","gap":false,"reason":"'That big ethereum L2' has no established antecedent to resolve from."}
+{"n":34,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"Tool recommendation request, not an on-chain metric."}
+{"n":35,"class":"analytical","status":"complete","detail":"token=AAVE; metric=holder count","gap":false,"reason":"Concrete metric, well-known token, no ask needed."}
+{"n":36,"class":"analytical","status":"clarify","detail":"ask wallet address","gap":false,"reason":"'My wallet' has no address given."}
+{"n":37,"class":"analytical","status":"complete","detail":"resolved 'largest lending dao' to top lending protocol by TVL (e.g. Aave); sub_goal=treasury value/activity","gap":true,"reason":"Resolving which protocol counts as 'largest lending dao' requires assuming a ranking metric not explicitly stated."}
+{"n":38,"class":"analytical","status":"clarify","detail":"ask which concrete metric ('activity' is vague, no scope signal); vitalik.eth resolves to ethereum","gap":false,"reason":"Vague unmeasurable metric with no scope signal triggers rule 5 ask."}
+{"n":39,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Mechanism/definitional question about slippage calculation."}
+{"n":40,"class":"analytical","status":"clarify","detail":"ask whether they want personal eligibility/claim check (needs wallet) or general ARB airdrop info","gap":false,"reason":"Matches rule 7's explicit ambiguous example ('did I miss the airdrop') — must ask personal vs general before proceeding."}
+{"n":41,"class":"analytical","status":"complete","detail":"leaderboard/comparison of DEXs by volume, current","gap":false,"reason":"Well-known protocol comparison question, concrete metric."}
+{"n":42,"class":"analytical","status":"clarify","detail":"ask wallet address; output_scope=full ('full report')","gap":false,"reason":"'My wallet' has no address given."}
+{"n":43,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional question about rug pulls."}
+{"n":44,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Yes/no factual question about token existence, no data pull needed."}
+{"n":45,"class":"analytical","status":"complete","detail":"sector=overall crypto market; leaderboard/aggregate top assets and market metrics","gap":false,"reason":"Whole-market category with no single entity decomposes per rule 6 regardless of 'healthy' wording."}
+{"n":46,"class":"analytical","status":"clarify","detail":"ask which chain the address is on","gap":false,"reason":"Address given with no chain."}
+{"n":47,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional purpose-of-staking question."}
+{"n":48,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"'Worth holding long term' is an investment-opinion ask."}
+{"n":49,"class":"analytical","status":"clarify","detail":"ask wallet address and chain","gap":false,"reason":"Approval-check request has no address or chain given."}
+{"n":50,"class":"analytical","status":"complete","detail":"sector=DeFi protocols; leaderboard/aggregate engagement metrics (active users, volume)","gap":false,"reason":"Whole-sector ask with no single entity decomposes per rule 6."}
+{"n":51,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional hot vs cold wallet question."}
+{"n":52,"class":"analytical","status":"clarify","detail":"ask which token/asset and chain whale buying refers to","gap":false,"reason":"No address, protocol, or chain-wide scope given."}
+{"n":53,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"'Is this a good investment' is explicit financial-advice framing."}
+{"n":54,"class":"analytical","status":"clarify","detail":"ask james's wallet address","gap":false,"reason":"Named individual with no address given."}
+{"n":55,"class":"analytical","status":"clarify","detail":"ask which concrete validator metric (count, uptime, slashing/incidents) on BNB chain","gap":true,"reason":"'What's going on with validators' is open-ended with no established bundle; whether to ask vs default to validator count/status is a judgment call."}
+{"n":56,"class":"analytical","status":"complete","detail":"chain=ethereum; metric=gas trends, timeframe=this week, scope=summary","gap":false,"reason":"Chain-wide metric with named chain, timeframe, and explicit 'quick' scope signal."}
+{"n":57,"class":"explanatory","status":null,"detail":null,"gap":true,"reason":"General methodology question with no named DAO; reasonably explanatory but could also be read as analytical requiring a protocol ask."}
+{"n":58,"class":"analytical","status":"complete","detail":"chain=base; metric=largest wallet by balance, current","gap":false,"reason":"Chain-wide metric with named chain, no ask needed."}
+{"n":59,"class":"conversational","status":null,"detail":null,"gap":true,"reason":"Identity-verification question with no clean on-chain metric or established bundle to map to; judgment call to not force it into analytical."}
+{"n":60,"class":"analytical","status":"clarify","detail":"ask tx hash or wallet address and chain","gap":false,"reason":"Stuck-transaction lookup has no identifier given."}
+{"n":61,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional flash-loan question."}
+{"n":62,"class":"analytical","status":"complete","detail":"aggregate/leaderboard count of known DAOs across chains","gap":true,"reason":"Treating 'how many DAOs exist' as a category-wide aggregate rather than asking for a chain scope is an extrapolation."}
+{"n":63,"class":"analytical","status":"complete","detail":"chains=arbitrum vs optimism; DeFi comparison metrics (TVL, volume, fees)","gap":false,"reason":"Two named chains compared on a concrete sector (DeFi)."}
+{"n":64,"class":"analytical","status":"clarify","detail":"ask wallet address (timeframe resolved to this year/YTD)","gap":false,"reason":"'My wallet' has no address given."}
+{"n":65,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional token-vs-protocol question."}
+{"n":66,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"General safety-advice question, not a specific data check request."}
+{"n":67,"class":"analytical","status":"complete","detail":"token=MKR; metric=circulating/float supply, current","gap":false,"reason":"Concrete metric, well-known token."}
+{"n":68,"class":"analytical","status":"complete","detail":"protocol=Lido; sub_goal=vote results of most recent governance proposal","gap":true,"reason":"Resolving 'that last proposal' to 'the most recent proposal' instead of asking is a judgment call on an unestablished antecedent."}
+{"n":69,"class":"analytical","status":"clarify","detail":"ask wallet address and chain (and what 'unusual activity' should flag)","gap":false,"reason":"No address given; 'unusual activity' also vague with no bundle."}
+{"n":70,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional sybil-attack question."}
+{"n":71,"class":"analytical","status":"clarify","detail":"ask which concrete metric (TVL, volume, users trend) to gauge Compound's relevance","gap":false,"reason":"Vague qualitative 'still relevant' with no scope signal, per classifier's explicit thriving/holding-up carve-out."}
+{"n":72,"class":"analytical","status":"complete","detail":"chain=polygon; metric=TVL, scope=summary","gap":false,"reason":"Chain-wide metric, named chain, 'quick' scope signal."}
+{"n":73,"class":"analytical","status":"clarify","detail":"ask wallet address and which NFT collection ('that one' unresolved)","gap":false,"reason":"No address or collection identified."}
+{"n":74,"class":"analytical","status":"complete","detail":"cross-chain DEX volume aggregate/leaderboard, default recent window","gap":false,"reason":"No single chain named; sector-style decomposition."}
+{"n":75,"class":"analytical","status":"clarify","detail":"ask friend's wallet address","gap":false,"reason":"Named individual, no address given."}
+{"n":76,"class":"analytical","status":"clarify","detail":"ask user's wallet address and chain (Binance resolves via known deposit wallet)","gap":false,"reason":"'My wallet' side of the deposit trace has no address given."}
+{"n":77,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional 'whale threshold' question."}
+{"n":78,"class":"analytical","status":"complete","detail":"leaderboard/aggregate governance activity (voter turnout, proposal pass rate) across known DAOs","gap":false,"reason":"Whole-category ask decomposes per rule 6."}
+{"n":79,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"'Worth it' framing is investment opinion, not a metric request."}
+{"n":80,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"Tool/method recommendation request, not a data op."}
+{"n":81,"class":"analytical","status":"complete","detail":"protocol=Uniswap; sub_goal=historical governance vote on fee switch proposal, all-time","gap":false,"reason":"Governance vote history is on-chain data per classifier's DAO-voting-dispute carve-out."}
+{"n":82,"class":"analytical","status":"clarify","detail":"ask which concrete metric (gas price, mempool/pending tx, block fullness) to gauge Optimism congestion","gap":false,"reason":"Rule explicitly warns congestion ≠ gas price; no established bundle, so ask rather than substitute."}
+{"n":83,"class":"analytical","status":"clarify","detail":"ask wallet address and chain","gap":false,"reason":"Approval-history check has no address or chain given."}
+{"n":84,"class":"analytical","status":"complete","detail":"protocol=Lido/LDO; sub_goal=contract verification/permissions as audit-status proxy","gap":true,"reason":"True third-party audit status is off-chain; substituting on-chain contract-verification data is an extrapolation rather than a literal answer."}
+{"n":85,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional rebase-token question."}
+{"n":86,"class":"analytical","status":"complete","detail":"sector=NFT market; aggregate volume trend, timeframe=this month","gap":false,"reason":"Whole-category concrete metric with timeframe given."}
+{"n":87,"class":"analytical","status":"complete","detail":"chain=arbitrum; metric=frontrunning/MEV bot transaction activity, default recent window","gap":false,"reason":"Named chain, concrete detectable phenomenon."}
+{"n":88,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Product-comparison definitional question, no data pull."}
+{"n":89,"class":"analytical","status":"clarify","detail":"ask wallet address","gap":false,"reason":"'My portfolio' has no address given."}
+{"n":90,"class":"analytical","status":"clarify","detail":"ask which concrete metric ('activity' vague, no scope signal); vitalik.eth resolves to ethereum, timeframe=past year","gap":false,"reason":"Timeframe given doesn't resolve the vague-metric requirement under rule 5."}
+{"n":91,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional liquidity-pool question."}
+{"n":92,"class":"analytical","status":"clarify","detail":"ask which specific farming protocol on BNB chain","gap":true,"reason":"'Farming risk' on a whole chain has no single entity and no established risk bundle for chain-wide farming; asking for a protocol is a judgment call vs. some other decomposition."}
+{"n":93,"class":"analytical","status":"complete","detail":"protocols=Aave vs Compound; rug-risk/safety bundle comparison (liquidity lock, holder concentration, contract permissions)","gap":false,"reason":"'Safer than' routes to the rug-risk bundle for both well-known protocols."}
+{"n":94,"class":"analytical","status":"clarify","detail":"ask wallet address","gap":false,"reason":"'My exposure' has no address given."}
+{"n":95,"class":"analytical","status":"clarify","detail":"ask which chain the address is on","gap":false,"reason":"Address given with no chain."}
+{"n":96,"class":"analytical","status":"complete","detail":"sector=overall crypto market; leaderboard/aggregate metrics, output_scope=full","gap":false,"reason":"Whole-market ask with explicit 'full report' scope signal."}
+{"n":97,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional governance-token question."}
+{"n":98,"class":"analytical","status":"clarify","detail":"ask friend's wallet address and chain","gap":false,"reason":"Named individual, no address given."}
+{"n":99,"class":"analytical","status":"complete","detail":"token=MKR; metric=top holder, current","gap":false,"reason":"Concrete metric, well-known token."}
+{"n":100,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional impermanent-loss question."}
+{"n":101,"class":"analytical","status":"clarify","detail":"ask which concrete growth metric (TVL, active addresses, tx volume) for Base","gap":false,"reason":"Vague qualitative 'growing/hype' with no scope signal, per classifier's thriving/holding-up carve-out."}
+{"n":102,"class":"analytical","status":"clarify","detail":"ask which bridge (official Polygon PoS bridge vs a specific third-party bridge)","gap":true,"reason":"'Bridging delays' spans multiple distinct bridge contracts; picking one instead of asking would be a guess."}
+{"n":103,"class":"analytical","status":"clarify","detail":"ask wallet address","gap":false,"reason":"'My wallet' has no address given; personal framing is unambiguous."}
+{"n":104,"class":"analytical","status":"clarify","detail":"ask which concrete metric (TVL, volume, users trend) to gauge whether COMP is 'dead'","gap":false,"reason":"Vague qualitative state with no scope signal, per classifier's carve-out."}
+{"n":105,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"Recommendation request for beginners, not a metric."}
+{"n":106,"class":"analytical","status":"complete","detail":"jesse.base.eth resolves to base chain; sub_goal=contract interaction/permissions check","gap":false,"reason":"Chain-specific ENS subdomain (*.base.eth) resolves to Base per explicit rule."}
+{"n":107,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional naming question (ARB token vs Arbitrum One chain)."}
+{"n":108,"class":"analytical","status":"complete","detail":"chain=ethereum; metric=total ETH staked, current","gap":false,"reason":"Chain-wide metric with named chain."}
+{"n":109,"class":"analytical","status":"clarify","detail":"ask wallet address ('this whale wallet' unresolved)","gap":false,"reason":"No address given and no established antecedent."}
+{"n":110,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional treasury-multisig question."}
+{"n":111,"class":"analytical","status":"clarify","detail":"ask wallet address (all-time timeframe resolved; chain defaults unified)","gap":false,"reason":"'My wallet' has no address given."}
+{"n":112,"class":"analytical","status":"clarify","detail":"ask which concrete metric (TVL, volume, fees, active users) for Uniswap health","gap":true,"reason":"'Health' is in the explicit vague-metric list, but whether 'these days' counts as enough of a scope signal to expand into a bundle instead of asking is a judgment call."}
+{"n":113,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"'Worth it' framing is a personal-decision opinion ask."}
+{"n":114,"class":"analytical","status":"complete","detail":"sector=lending; leaderboard/aggregate across known lending protocols","gap":false,"reason":"Whole-sector ask decomposes per rule 6."}
+{"n":115,"class":"analytical","status":"clarify","detail":"ask wallet address","gap":false,"reason":"'My wallet' has no address given."}
+{"n":116,"class":"analytical","status":"complete","detail":"leaderboard/comparison of chains by gas fees for NFT minting, current","gap":false,"reason":"Concrete metric (gas fees) compared across chains, no single chain named."}
+{"n":117,"class":"analytical","status":"clarify","detail":"ask wallet address and chain","gap":false,"reason":"'My wallet' has no address given."}
+{"n":118,"class":"analytical","status":"complete","detail":"leaderboard of DAO treasuries by value, current","gap":false,"reason":"Cross-entity comparison, concrete metric."}
+{"n":119,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional/mechanism question about validator selection."}
+{"n":120,"class":"conversational","status":null,"detail":null,"gap":false,"reason":"'Good long term hold' is investment opinion."}
+{"n":121,"class":"analytical","status":"clarify","detail":"ask which chain/wallet — Coinbase operates multiple per-chain hot wallets","gap":false,"reason":"CEX wallet needs distinguishing across chains before withdrawal delays can be examined."}
+{"n":122,"class":"analytical","status":"clarify","detail":"ask for the 3 wallet addresses (chain defaults unified)","gap":false,"reason":"Multiple wallets referenced but none of the addresses given."}
+{"n":123,"class":"explanatory","status":null,"detail":null,"gap":false,"reason":"Definitional quorum-failure question."}
+{"n":124,"class":"analytical","status":"clarify","detail":"ask which DAO ('this dao' unresolved)","gap":false,"reason":"No protocol/DAO named and no established antecedent."}
+{"n":125,"class":"analytical","status":"clarify","detail":"ask both wallet addresses (user's and friend's)","gap":false,"reason":"Comparison request with neither address given."}

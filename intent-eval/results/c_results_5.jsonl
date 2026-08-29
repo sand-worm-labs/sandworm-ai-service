@@ -1,0 +1,125 @@
+{"n": 1, "class": "analytical", "status": "complete", "detail": "Uniswap DAO treasury balance, all tracked chains, current", "gap": false, "reason": "Well-known DAO named explicitly, current snapshot needs no further clarification."}
+{"n": 2, "class": "analytical", "status": "complete", "detail": "Arbitrum DAO voter turnout, last 5 proposals", "gap": false, "reason": "Entity and scope (last five proposals) are both explicit."}
+{"n": 3, "class": "analytical", "status": "complete", "detail": "Compound governance, proposals failing quorum, all-time", "gap": false, "reason": "Governance/vote-margin question routes to analytical per rule, entity is named."}
+{"n": 4, "class": "analytical", "status": "complete", "detail": "chain=ethereum, validator staking participation rate, past quarter", "gap": false, "reason": "Chain-wide metric with named chain needs no address."}
+{"n": 5, "class": "analytical", "status": "clarify", "detail": "asks which DAO/treasury the runway question refers to", "gap": false, "reason": "No entity, protocol, or chain given at all."}
+{"n": 6, "class": "analytical", "status": "complete", "detail": "MakerDAO (MKR), delegate concentration top 10 holders' voting power", "gap": false, "reason": "Entity and metric are explicit."}
+{"n": 7, "class": "analytical", "status": "complete", "detail": "Lido, proposal pass-rate trend, since inception (full history)", "gap": false, "reason": "All-time phrase resolves to full history per rule, no ask needed."}
+{"n": 8, "class": "analytical", "status": "complete", "detail": "top 5 PoS chains, validator count and distribution, leaderboard", "gap": false, "reason": "Category with no single entity decomposes into a cross-chain leaderboard."}
+{"n": 9, "class": "analytical", "status": "clarify", "detail": "asks which DAO 'the DAO' refers to", "gap": false, "reason": "No protocol/DAO named and no history to resolve the pronoun."}
+{"n": 10, "class": "analytical", "status": "complete", "detail": "Aave (resolved as largest lending DAO), treasury exposure to native token", "gap": false, "reason": "Superlative 'largest lending DAO' is explicit delegation, resolved without asking."}
+{"n": 11, "class": "analytical", "status": "clarify", "detail": "asks which chain the address is on before checking delegate status", "gap": true, "reason": "Rule 3 forces a chain ask for any bare 0x address, but a delegate-registry lookup isn't chain-scoped the way a balance query is -- asking chain here is unhelpful friction."}
+{"n": 12, "class": "analytical", "status": "complete", "detail": "Aave, current governance quorum threshold", "gap": false, "reason": "Entity and metric explicit, current value needs no timeframe ask."}
+{"n": 13, "class": "analytical", "status": "complete", "detail": "DeFi lending sector, aggregate/leaderboard TVL, this quarter", "gap": false, "reason": "Sector-wide ask decomposes into leaderboard per rule 6."}
+{"n": 14, "class": "analytical", "status": "clarify", "detail": "asks which big Ethereum L2's DAO is meant", "gap": false, "reason": "'That big Ethereum L2' doesn't uniquely identify one of several large L2s (Arbitrum, Optimism, Base, etc.)."}
+{"n": 15, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'The DAO' has no antecedent in a first message."}
+{"n": 16, "class": "analytical", "status": "complete", "detail": "Uniswap (UNI), % of circulating supply actively delegated, current", "gap": false, "reason": "Entity and metric explicit."}
+{"n": 17, "class": "analytical", "status": "complete", "detail": "Cosmos ecosystem chains, validator churn rate, comparison", "gap": false, "reason": "Category/sector with no single chain named decomposes per rule 6."}
+{"n": 18, "class": "analytical", "status": "clarify", "detail": "asks which protocol", "gap": false, "reason": "'This protocol' is unresolved with no prior history."}
+{"n": 19, "class": "analytical", "status": "complete", "detail": "Compound, correlation of proposal complexity (proxy: actions/calldata) vs voter turnout", "gap": true, "reason": "'Proposal complexity' isn't a defined on-chain metric; proceeding silently invents a proxy definition rather than confirming what the user means."}
+{"n": 20, "class": "analytical", "status": "complete", "detail": "MakerDAO, avg time from proposal submission to execution, default recent window", "gap": false, "reason": "No timeframe given defaults to a sensible recent window per rule, entity explicit."}
+{"n": 21, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury multisig", "gap": false, "reason": "'The treasury multisig' names no owning DAO."}
+{"n": 22, "class": "analytical", "status": "clarify", "detail": "asks which chain 'the network' refers to", "gap": false, "reason": "Chain-wide metric but no chain named and none established in history."}
+{"n": 23, "class": "analytical", "status": "complete", "detail": "vitalik.eth (ENS->ethereum), delegate voting power distribution across his DAOs", "gap": false, "reason": "ENS resolves address/chain automatically, no ask needed."}
+{"n": 24, "class": "analytical", "status": "complete", "detail": "DAOs broadly, governance participation trend, quick/summary scope", "gap": false, "reason": "Sector-wide broad ask with 'quick' scope signal decomposes into a headline leaderboard per rule 6."}
+{"n": 25, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury multisig", "gap": false, "reason": "'This treasury multisig' has no antecedent."}
+{"n": 26, "class": "analytical", "status": "complete", "detail": "cross-chain leaderboard, most active validators, current", "gap": false, "reason": "Chain-wide metric compared across all chains, no single chain needed for a leaderboard."}
+{"n": 27, "class": "analytical", "status": "complete", "detail": "DeFi lending sector, growth/contraction (TVL trend), leaderboard/aggregate", "gap": false, "reason": "Sector-wide ask decomposes per rule 6."}
+{"n": 28, "class": "analytical", "status": "complete", "detail": "Aave (resolved as largest lending DAO), historical quorum failure rate", "gap": false, "reason": "Superlative delegation resolved without asking."}
+{"n": 29, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'The DAO' unresolved."}
+{"n": 30, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury jesse.base.eth's inflows relate to", "gap": false, "reason": "Address/chain resolve automatically (*.base.eth->base) but 'the treasury' names no owning DAO."}
+{"n": 31, "class": "analytical", "status": "complete", "detail": "chain=ethereum, current staking yield across top validator sets", "gap": false, "reason": "Chain-wide metric with named chain."}
+{"n": 32, "class": "analytical", "status": "complete", "detail": "top 5 DeFi DAOs, treasury diversification comparison", "gap": false, "reason": "Explicit cross-entity comparison, category rule applies."}
+{"n": 33, "class": "analytical", "status": "complete", "detail": "Lido (LDO), pending proposals on validator commission rates", "gap": false, "reason": "Entity and metric explicit."}
+{"n": 34, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 35, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury multisig", "gap": false, "reason": "No owning DAO named."}
+{"n": 36, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 37, "class": "analytical", "status": "clarify", "detail": "asks which protocol", "gap": false, "reason": "'This protocol' unresolved."}
+{"n": 38, "class": "analytical", "status": "complete", "detail": "Compound (COMP), historical token price vs governance participation relationship", "gap": false, "reason": "Entity explicit, historical scope resolves to full history."}
+{"n": 39, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury", "gap": false, "reason": "'The treasury' names no DAO."}
+{"n": 40, "class": "analytical", "status": "clarify", "detail": "asks which chain the address is on before checking DAO voting history", "gap": true, "reason": "Same as #11 -- DAO voting history isn't inherently chain-scoped, so asking chain is likely unnecessary friction versus just searching known major DAOs."}
+{"n": 41, "class": "analytical", "status": "complete", "detail": "chain=ethereum, top staking providers' current validator uptime", "gap": false, "reason": "Chain-wide metric with named chain, sub-entity (providers) selection needs no ask."}
+{"n": 42, "class": "analytical", "status": "clarify", "detail": "asks which DAO/protocol", "gap": false, "reason": "'The last governance cycle' has no owning protocol named."}
+{"n": 43, "class": "analytical", "status": "complete", "detail": "MakerDAO (MKR), voting power concentration among top 1% of holders", "gap": false, "reason": "Entity and metric explicit."}
+{"n": 44, "class": "explanatory", "status": null, "detail": null, "gap": false, "reason": "Definitional question about what a whale wallet is, no data pull needed."}
+{"n": 45, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 46, "class": "analytical", "status": "clarify", "detail": "asks which DAO/treasury", "gap": false, "reason": "No entity named at all for the runway assessment."}
+{"n": 47, "class": "analytical", "status": "complete", "detail": "Arbitrum DAO, participation rate by delegate size", "gap": false, "reason": "Entity and metric explicit."}
+{"n": 48, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 49, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury", "gap": false, "reason": "'The treasury' names no DAO."}
+{"n": 50, "class": "analytical", "status": "complete", "detail": "bsc vs ethereum, staking centralization comparison", "gap": false, "reason": "Two named chains (normalized bnb->bsc, eth->ethereum), no ask needed."}
+{"n": 51, "class": "explanatory", "status": null, "detail": null, "gap": false, "reason": "Definitional question about what quorum is and how it's calculated."}
+{"n": 52, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 53, "class": "analytical", "status": "clarify", "detail": "asks which protocol", "gap": false, "reason": "Governance-dispute question routes analytical per rule, but 'this protocol' is unnamed."}
+{"n": 54, "class": "analytical", "status": "clarify", "detail": "asks for the delegate address and which DAO's quorum is meant", "gap": false, "reason": "'This address' and DAO context are both unestablished."}
+{"n": 55, "class": "analytical", "status": "complete", "detail": "major PoS networks, avg validator commission rate, leaderboard/aggregate", "gap": false, "reason": "Sector-wide category, no single chain needed."}
+{"n": 56, "class": "analytical", "status": "clarify", "detail": "asks which DAO; forum/comment activity would also be flagged infeasible (off-chain)", "gap": false, "reason": "No DAO named; separately, forum/proposal-comment activity is off-platform data outside on-chain scope."}
+{"n": 57, "class": "explanatory", "status": null, "detail": null, "gap": false, "reason": "Conceptual/definitional question about UNI token vs governance process, not a data pull."}
+{"n": 58, "class": "analytical", "status": "complete", "detail": "chain=arbitrum, validator/decentralization full report", "gap": false, "reason": "Named chain, chain-wide metric, full-report scope stated explicitly."}
+{"n": 59, "class": "analytical", "status": "complete", "detail": "DAOs broadly, governance participation trend, sector leaderboard", "gap": false, "reason": "Sector-wide broad ask decomposes per rule 6."}
+{"n": 60, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury", "gap": false, "reason": "No DAO named for 'the treasury' outflows."}
+{"n": 61, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved; vague 'health' metric would also need expansion once entity is known."}
+{"n": 62, "class": "analytical", "status": "complete", "detail": "Aave (AAVE), token distribution top holders vs community, current", "gap": false, "reason": "Entity and metric explicit."}
+{"n": 63, "class": "analytical", "status": "clarify", "detail": "asks which chain/network", "gap": false, "reason": "'This network' unresolved."}
+{"n": 64, "class": "analytical", "status": "complete", "detail": "Aave (resolved as largest lending DAO) vs peer DAOs, governance centralization comparison", "gap": false, "reason": "Superlative delegation resolved, peers comparison implied."}
+{"n": 65, "class": "analytical", "status": "complete", "detail": "major L1s, total staked value, leaderboard/aggregate, current", "gap": false, "reason": "Sector-wide category decomposes per rule 6."}
+{"n": 66, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 67, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 68, "class": "analytical", "status": "clarify", "detail": "asks which protocol", "gap": false, "reason": "'This protocol' unresolved."}
+{"n": 69, "class": "analytical", "status": "complete", "detail": "MakerDAO (MKR), historical correlation of price vs proposal frequency", "gap": false, "reason": "Entity explicit, historical scope resolves to full history."}
+{"n": 70, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 71, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 72, "class": "analytical", "status": "complete", "detail": "chain=ethereum, % of validators run by centralized staking providers, current", "gap": false, "reason": "Chain-wide metric with named chain."}
+{"n": 73, "class": "analytical", "status": "complete", "detail": "Lido (LDO), full governance token distribution report", "gap": false, "reason": "Entity and metric explicit."}
+{"n": 74, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 75, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury multisig", "gap": false, "reason": "No owning DAO named."}
+{"n": 76, "class": "analytical", "status": "complete", "detail": "optimism vs arbitrum (combined), validator decentralization, current", "gap": false, "reason": "Two named chains, no ask needed."}
+{"n": 77, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved; question is reframed as governance-activity-vs-claims, not the generic rug bundle."}
+{"n": 78, "class": "analytical", "status": "complete", "detail": "Compound (COMP), % of supply held in protocol treasury, current", "gap": false, "reason": "Entity and metric explicit."}
+{"n": 79, "class": "analytical", "status": "complete", "detail": "top ten DeFi DAOs, avg proposal-to-execution timeline, comparison", "gap": false, "reason": "Category comparison decomposes per rule 6."}
+{"n": 80, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": true, "reason": "Classified analytical (parallels treasury-balance-history questions elsewhere in the set) rather than explanatory, since the explanatory security-incident exception is narrowly scoped to hacks/exploits, not solvency disclosures -- a defensible but non-obvious call."}
+{"n": 81, "class": "analytical", "status": "complete", "detail": "vitalik.eth (ENS->ethereum), delegate voting consistency, last year", "gap": false, "reason": "ENS resolves address/chain, timeframe explicit."}
+{"n": 82, "class": "analytical", "status": "complete", "detail": "Aave (resolved as largest lending DAO), validator set size of its associated chain, current", "gap": false, "reason": "Superlative resolved; question itself hedges 'if any' so a null/no-dedicated-chain result is a valid answer."}
+{"n": 83, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'The DAO' unresolved."}
+{"n": 84, "class": "analytical", "status": "complete", "detail": "sector-wide treasury diversification trend, leaderboard", "gap": false, "reason": "Sector-wide broad ask decomposes per rule 6."}
+{"n": 85, "class": "analytical", "status": "complete", "detail": "chain=polygon, validator staking participation trend", "gap": false, "reason": "'matic' normalizes to polygon, chain-wide metric."}
+{"n": 86, "class": "analytical", "status": "clarify", "detail": "asks which protocol", "gap": false, "reason": "'This protocol' unresolved."}
+{"n": 87, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "No protocol/DAO named at all."}
+{"n": 88, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 89, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 90, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 91, "class": "analytical", "status": "complete", "detail": "bsc vs ethereum, validator rewards comparison", "gap": false, "reason": "Two named chains, no ask needed."}
+{"n": 92, "class": "analytical", "status": "complete", "detail": "top PoS chains, staking yields, sector leaderboard", "gap": false, "reason": "Sector-wide category decomposes per rule 6."}
+{"n": 93, "class": "analytical", "status": "complete", "detail": "MakerDAO (MKR), historical voting participation of top delegate (by voting power)", "gap": false, "reason": "Sub-entity selection ('top delegate') resolved without asking, per rule."}
+{"n": 94, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "No DAO named, 'this' has no antecedent."}
+{"n": 95, "class": "analytical", "status": "complete", "detail": "Aave (resolved as largest lending DAO), governance activity since genesis", "gap": false, "reason": "Superlative resolved, all-time scope resolves to full history."}
+{"n": 96, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 97, "class": "analytical", "status": "complete", "detail": "Lido vs Compound, delegate turnover comparison", "gap": false, "reason": "Both entities named explicitly."}
+{"n": 98, "class": "analytical", "status": "clarify", "detail": "asks which chain/network", "gap": false, "reason": "'This network' unresolved."}
+{"n": 99, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO's treasury' unresolved."}
+{"n": 100, "class": "analytical", "status": "clarify", "detail": "asks which DAO/protocol", "gap": false, "reason": "No entity named for tokenomics vs operational proposal participation."}
+{"n": 101, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 102, "class": "analytical", "status": "complete", "detail": "chain=ethereum, validator geographic distribution (flagged off-chain/infeasible)", "gap": false, "reason": "Chain named; geographic distribution is provably off-chain telemetry, correctly flagged rather than blocking the whole request."}
+{"n": 103, "class": "analytical", "status": "complete", "detail": "DeFi sector, treasury management practices comparison, leaderboard", "gap": false, "reason": "Sector-wide broad ask decomposes per rule 6."}
+{"n": 104, "class": "analytical", "status": "complete", "detail": "Aave (AAVE), contentious emissions vote history", "gap": false, "reason": "Entity explicit, governance-dispute question routes analytical."}
+{"n": 105, "class": "analytical", "status": "complete", "detail": "Arbitrum, Optimism, Base governance, proposal execution delay comparison", "gap": false, "reason": "Three entities named explicitly."}
+{"n": 106, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 107, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury", "gap": false, "reason": "'The treasury' names no DAO."}
+{"n": 108, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 109, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 110, "class": "conversational", "status": null, "detail": null, "gap": false, "reason": "Advice-seeking ('is it advisable') rather than a metric request, parallel to 'should I buy X'."}
+{"n": 111, "class": "analytical", "status": "complete", "detail": "chain=ethereum, current validator withdrawal queue length", "gap": false, "reason": "Chain-wide metric with named chain."}
+{"n": 112, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'The DAO' unresolved."}
+{"n": 113, "class": "analytical", "status": "clarify", "detail": "asks which protocol", "gap": false, "reason": "'This protocol' unresolved."}
+{"n": 114, "class": "analytical", "status": "complete", "detail": "Lido (LDO), total staked supply across associated validator sets", "gap": false, "reason": "Entity and metric explicit."}
+{"n": 115, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "No DAO named for proposal turnout by delegate size."}
+{"n": 116, "class": "analytical", "status": "clarify", "detail": "asks which DAO ('here' has no antecedent)", "gap": false, "reason": "First message can't resolve 'here'."}
+{"n": 117, "class": "analytical", "status": "complete", "detail": "top three PoS chains, validator centralization risk, comparison", "gap": false, "reason": "Sector-wide category decomposes per rule 6."}
+{"n": 118, "class": "analytical", "status": "clarify", "detail": "asks which DAO's treasury", "gap": false, "reason": "'Any treasury funds' names no DAO."}
+{"n": 119, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 120, "class": "analytical", "status": "clarify", "detail": "asks which DAO/protocol", "gap": false, "reason": "No entity named for delegate response time."}
+{"n": 121, "class": "analytical", "status": "complete", "detail": "Aave (resolved as largest lending DAO), missed quorum on rate-change proposal history", "gap": false, "reason": "Superlative delegation resolved without asking."}
+{"n": 122, "class": "analytical", "status": "clarify", "detail": "asks which token/DAO", "gap": false, "reason": "'This' governance token distribution has no antecedent."}
+{"n": 123, "class": "analytical", "status": "complete", "detail": "chain=bsc, TVL in staking contracts, current", "gap": false, "reason": "Chain-wide metric with named chain ('bnb chain'->bsc)."}
+{"n": 124, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}
+{"n": 125, "class": "analytical", "status": "clarify", "detail": "asks which DAO", "gap": false, "reason": "'This DAO' unresolved."}

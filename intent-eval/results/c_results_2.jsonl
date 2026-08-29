@@ -1,0 +1,50 @@
+{"n": 1, "class": "analytical", "status": "complete", "detail": "BAYC floor price, ethereum, now", "gap": false, "reason": "Well-known collection resolves without address; floor price is a concrete metric."}
+{"n": 2, "class": "analytical", "status": "complete", "detail": "SOLPEPE mcap, chain=solana (via pump.fun)", "gap": false, "reason": "pump.fun is a chain-specific proper noun anchoring solana; token named explicitly."}
+{"n": 3, "class": "analytical", "status": "complete", "detail": "CryptoPunks #4521 recent sale, ethereum, ~7d window", "gap": false, "reason": "Well-known collection plus specific token id fully identifies the query."}
+{"n": 4, "class": "analytical", "status": "clarify", "detail": "asks which token/contract 'this' refers to", "gap": false, "reason": "No antecedent for 'this' and no address/protocol given in a fresh chat."}
+{"n": 5, "class": "analytical", "status": "clarify", "detail": "asks for the whale's wallet address", "gap": false, "reason": "Unnamed whale must be identified before dump amount can be queried."}
+{"n": 6, "class": "explanatory", "status": null, "detail": null, "gap": false, "reason": "Pure definitional question, no data pull needed."}
+{"n": 7, "class": "analytical", "status": "complete", "detail": "Azuki floor price trend, 7d, ethereum", "gap": false, "reason": "Well-known collection; 'all week' resolves to a 7d window."}
+{"n": 8, "class": "analytical", "status": "complete", "detail": "top gaining token right now, cross-chain leaderboard scan", "gap": false, "reason": "'Whichever token' is explicit delegation of entity choice, resolved via leaderboard rather than asked."}
+{"n": 9, "class": "analytical", "status": "clarify", "detail": "asks for chain/contract address of $FROGWIF", "gap": false, "reason": "Obscure named token with no chain anchor; liquidity-lock check needs exact contract."}
+{"n": 10, "class": "analytical", "status": "complete", "detail": "NFT market overview - top collections leaderboard by volume/floor", "gap": false, "reason": "Whole-sector query decomposed into a leaderboard per category rule."}
+{"n": 11, "class": "analytical", "status": "clarify", "detail": "asks for chain/contract of BONK2.0 to identify dev wallet", "gap": false, "reason": "Obscure/clone token name alone can't pin down the dev wallet without chain/contract."}
+{"n": 12, "class": "analytical", "status": "clarify", "detail": "asks which specific Doodles derivative collection", "gap": false, "reason": "'A Doodles derivative' names no specific collection."}
+{"n": 13, "class": "analytical", "status": "complete", "detail": "wash trading on X2Y2, ethereum, 24h", "gap": false, "reason": "Well-known marketplace, concrete metric and timeframe given."}
+{"n": 14, "class": "conversational", "status": null, "detail": null, "gap": false, "reason": "Pure financial-advice ask, no entity or metric."}
+{"n": 15, "class": "analytical", "status": "complete", "detail": "CryptoPunks volume since launch (all-time), ethereum", "gap": false, "reason": "Well-known collection, all-time resolves to full history."}
+{"n": 16, "class": "explanatory", "status": null, "detail": null, "gap": false, "reason": "Definitional question about cbETH vs ETH, no data pull requested."}
+{"n": 17, "class": "analytical", "status": "complete", "detail": "Pudgy Penguins holder count, ethereum, current", "gap": false, "reason": "Well-known collection, concrete metric."}
+{"n": 18, "class": "analytical", "status": "clarify", "detail": "asks for the contract address", "gap": false, "reason": "'This contract' has no antecedent."}
+{"n": 19, "class": "analytical", "status": "complete", "detail": "top NFT collection this week by volume, ethereum default", "gap": false, "reason": "Category leaderboard, no single entity to ask about."}
+{"n": 20, "class": "analytical", "status": "complete", "detail": "Moonbirds royalty revenue, last month, ethereum", "gap": false, "reason": "Well-known collection, concrete metric and resolvable timeframe."}
+{"n": 21, "class": "conversational", "status": null, "detail": null, "gap": false, "reason": "'Worth grabbing' is an opinion/financial-advice ask."}
+{"n": 22, "class": "analytical", "status": "clarify", "detail": "asks which token ('the pepe killer' nickname) they mean", "gap": false, "reason": "Nickname doesn't reliably resolve to one specific token."}
+{"n": 23, "class": "analytical", "status": "complete", "detail": "large wallet accumulation of GMX, recent (30d)", "gap": false, "reason": "GMX is a well-known protocol/token, no address needed."}
+{"n": 24, "class": "explanatory", "status": null, "detail": null, "gap": false, "reason": "Definitional question."}
+{"n": 25, "class": "analytical", "status": "clarify", "detail": "asks for the source wallet address", "gap": false, "reason": "'That wallet' has no antecedent in a fresh chat."}
+{"n": 26, "class": "analytical", "status": "complete", "detail": "CloneX #3312 rarity rank, ethereum", "gap": false, "reason": "Well-known collection with specific token id."}
+{"n": 27, "class": "analytical", "status": "complete", "detail": "UNI price movement vs recent governance vote, 7-30d, ethereum", "gap": false, "reason": "Well-known token; both price and vote data are on-chain metrics."}
+{"n": 28, "class": "analytical", "status": "clarify", "detail": "asks which token/launch they mean", "gap": false, "reason": "'This new launch' has no antecedent or name."}
+{"n": 29, "class": "explanatory", "status": null, "detail": null, "gap": false, "reason": "Definitional question."}
+{"n": 30, "class": "analytical", "status": "complete", "detail": "PFP collections category overview this month, leaderboard", "gap": false, "reason": "Whole-sector query decomposed into leaderboard."}
+{"n": 31, "class": "analytical", "status": "complete", "detail": "identify recent floor sweep buyer(s) on Doodles, ethereum", "gap": false, "reason": "Well-known collection, concrete event/metric."}
+{"n": 32, "class": "analytical", "status": "clarify", "detail": "asks which specific Milady token they mean", "gap": false, "reason": "'Earlier' has no antecedent in a fresh chat; unidentified specific token within collection."}
+{"n": 33, "class": "analytical", "status": "complete", "detail": "trending tokens on pump.fun, solana, now", "gap": false, "reason": "pump.fun anchors chain; category-wide trending scan needs no single entity."}
+{"n": 34, "class": "analytical", "status": "complete", "detail": "current offers on BAYC #1122, ethereum", "gap": false, "reason": "Specific token id fully identifies the NFT; ownership doesn't affect the offers query."}
+{"n": 35, "class": "conversational", "status": null, "detail": null, "gap": false, "reason": "'Is it worth buying' is an opinion/financial-advice ask despite the contract address being given."}
+{"n": 36, "class": "analytical", "status": "complete", "detail": "Moonbirds secondary sales volume since launch (all-time), ethereum", "gap": false, "reason": "Well-known collection, all-time timeframe resolves automatically."}
+{"n": 37, "class": "analytical", "status": "clarify", "detail": "asks which token/contract they mean", "gap": false, "reason": "'This new memecoin' is unnamed and unidentified."}
+{"n": 38, "class": "analytical", "status": "complete", "detail": "CryptoPunks holder count, ethereum, current", "gap": false, "reason": "Well-known collection, concrete metric."}
+{"n": 39, "class": "analytical", "status": "complete", "detail": "top gaining coins today, cross-chain leaderboard", "gap": false, "reason": "'Which coins pumping' is a discovery/leaderboard query, resolved rather than asked."}
+{"n": 40, "class": "analytical", "status": "clarify", "detail": "asks which token/contract 'this new launch' refers to", "gap": false, "reason": "No token named or identified."}
+{"n": 41, "class": "analytical", "status": "complete", "detail": "wash trading activity on Blur, ethereum, recent (30d)", "gap": false, "reason": "Well-known marketplace, concrete metric, 'lately' resolves to a recent window."}
+{"n": 42, "class": "analytical", "status": "complete", "detail": "AAVE borrow rate changes, recent (7-30d)", "gap": true, "reason": "Core AAVE metric is answerable, but 'is that irrelevant to this' references an unestablished 'this' that is never resolved or flagged."}
+{"n": 43, "class": "analytical", "status": "complete", "detail": "Azuki floor vs BAYC floor, now, ethereum", "gap": false, "reason": "Two well-known collections, direct comparison metric."}
+{"n": 44, "class": "analytical", "status": "clarify", "detail": "asks for chain/contract of ROCKETDOGE2077", "gap": true, "reason": "Literal text only asks about awareness/fame, not legitimacy; routing to rug-risk bundle requires an interpretive leap, even if contextually plausible for this tool."}
+{"n": 45, "class": "analytical", "status": "clarify", "detail": "asks which token/contract 'this' refers to", "gap": false, "reason": "No antecedent for 'this'; matches explicit 'is this legit' rug-risk example."}
+{"n": 46, "class": "analytical", "status": "clarify", "detail": "asks which collection/mint they mean", "gap": false, "reason": "No project or collection named at all."}
+{"n": 47, "class": "analytical", "status": "clarify", "detail": "asks which token/listing event they mean", "gap": false, "reason": "'The CEX listing announcement' names no specific token."}
+{"n": 48, "class": "explanatory", "status": null, "detail": null, "gap": false, "reason": "Definitional question, matches example directly."}
+{"n": 49, "class": "analytical", "status": "complete", "detail": "Pudgy Penguins price/floor trend, recent (7-30d), ethereum", "gap": false, "reason": "Well-known collection (slang 'pudgies'), concrete trend metric."}
+{"n": 50, "class": "analytical", "status": "complete", "detail": "BAYC total royalties, all-time, ethereum", "gap": false, "reason": "Well-known collection, 'total' resolves to full history."}

@@ -1,0 +1,125 @@
+1. What's been driving the surge in Base's daily active addresses this month?
+2. base gas fees?
+3. I'm working on a piece about restaking — can you give me a sense of how much TVL EigenLayer has pulled in since launch?
+4. is Uniswp still the biggest DEX by volume or did something overtake it
+5. What's the community saying about the Blast airdrop, was it received positively or negatively?
+6. aave tvl now
+7. Can you compare Uniswap to that other DEX everyone's using these days?
+8. jesse.base.eth transaction history
+9. How healthy is the Solana ecosystem right now, in your opinion?
+10. what's Aave's TVL and what's the community sentiment on it lately
+11. I keep hearing about "this cycle" being different for altcoins — is that actually showing up in the data?
+12. Optimisim sequencer revenue breakdown
+13. what's a rug pull anyway
+14. Give me a rundown of stablecoin market share shifts over the past six months — USDT vs USDC vs the rest.
+15. gmx open interest
+16. Is BNB the exchange itself or just a token, and how's its volume looking?
+17. How's DeFi lending doing this year compared to last, broadly speaking?
+18. arbitrium daily transactions
+19. should I be worried about Tether's reserves
+20. What happened to TVL during the last dip?
+21. compare Curve and Balancer TVL
+22. Writing a retrospective on L2 adoption — what's the state of play across Arbitrum, Optimism, and Base combined?
+23. poligon active validators
+24. how many whales moved WIF in the past 24h
+25. is this ecosystem healthy — Sui I mean
+26. what's Coinbase's trading volume vs the COIN stock price, are those related at all
+27. curious about how Jupiter's perp volume stacks up against GMX
+28. eth burn rate today
+29. Are people bullish or bearish on Celestia right now based on what you're seeing on-chain?
+30. compare that new restaking thing to EigenLayer, the popular one
+31. how much has bridged into Stargate this quarter
+32. what's KCS and is it different from Kraken
+33. tvl?
+34. I'm doing a feature on DePIN projects — what's the general trend in on-chain activity for Helium and Render this year?
+35. Is there negative press around Celsius these days, or has that died down?
+36. sushiswap vs uniswp liquidity comparison
+37. what's "this bull run" actually looked like for NFT volumes so far
+38. is Arbitrium the same as Arbitrum, just checking
+39. how's Cosmos IBC volume trending
+40. give me OKB token price and also what people on crypto twitter think about OKX right now
+41. define impermanent loss for me
+42. blur nft volume last 7 days
+43. What's been happening with the stablecoin market lately — feels like there's been a shift toward RWA-backed ones?
+44. sol tps
+45. Compare Solana to that other fast chain people keep talking about.
+46. crvUSD supply growth
+47. is Tron mostly used for USDT transfers still, and what's the volume look like
+48. how did the market react to the last Fed rate decision, on-chain wise
+49. jesse.base.eth
+50. What's the general sentiment on Worldcoin — is it seen as legit or controversial?
+51. dydx v4 volume since migration
+52. writing about MEV — how much value has been extracted from Ethereum users this year
+53. compare Aave to that other lending protocol, the newer one
+54. wat is starknet tvl
+55. Is Bybit solvent right now, and how would I even check that on-chain?
+56. lido staking share of total eth staked
+57. how's the "smart money" positioning in altcoins lately
+58. optimisim vs arbitrium which has more tvl
+59. give me a story angle: has L2 fee compression killed Ethereum mainnet revenue?
+60. cro token holders count
+61. is CRO the same thing as Crypto.com
+62. what's the vibe around Friend.tech these days
+63. avalanche subnet activity overview
+64. how much bitcoin do miners currently hold
+65. compare that L2 with the zero knowledge tech to Arbitrum
+66. is scroll live on mainnet and what's its tvl
+67. curious what's going on with Pendle's yield markets lately
+68. gas
+69. what's the deal with Wormhole after the exploit, did TVL recover
+70. is Poligon zkEVM different from regular Polygon
+71. give me a sense of stablecoin de-pegging events in the past year
+72. how's sentiment trending for Cardano among the dev community
+73. compare Jupiter to that Solana DEX with the frog logo
+74. usdc supply on base vs ethereum
+75. is there a rug pull happening with this new token, how would I tell
+76. what's aptos daily active users doing this quarter
+77. how much value is locked in liquid restaking tokens combined
+78. arbitrium bridge inflows this week
+79. doing research on prediction markets — how's Polymarket volume trending around elections
+80. compare Binance to that CEX token BNB, are volumes correlated
+81. what's "the last dip" done to Bitcoin dominance
+82. sui vs aptos which one has more real usage
+83. spark protocol borrow rates right now
+84. how healthy does the Terra ecosystem look post-collapse, any recovery signs
+85. give me curve pool imbalance data for 3pool
+86. what's morpho blue's growth looked like since launch
+87. is there a difference between Uniswap Labs and the Uniswap protocol for volume purposes
+88. how are memecoins performing this cycle compared to 2021
+89. base tvl
+90. writing a comparison piece: Coinbase vs Binance, on-chain footprint not just company metrics
+91. what's going on with the FTX estate wallets lately
+92. compare that new L1 everyone's hyping to Solana
+93. how's Uniswp v4 hook adoption looking
+94. tell me about DeFi's "summer" — is there a new one happening
+95. what's blast's tvl since the points program ended
+96. is okx a chain or just an exchange
+97. how much bridged liquidity has moved from Ethereum to L2s total
+98. curious about restaking risk — is EigenLayer overexposed to correlated slashing
+99. compare renzo and ether.fi tvl
+100. gm, what's eth price
+101. how are perps DEXs trending in volume this quarter, broadly
+102. is optimisim's retroactive funding actually reaching builders
+103. what's the community think about the Blur vs OpenSea fee war
+104. give me tron's stablecoin dominance numbers
+105. how's real world asset tokenization trending on-chain this year
+106. compare the newer restaking token to eigenlayer's EIGEN
+107. what's a whale wallet
+108. how much SOL is staked right now
+109. writing about the "flippening" narrative — is Solana closing the gap with Ethereum on any metrics
+110. poligon pos chain daily fees
+111. is there negative sentiment building around Justin Sun lately
+112. compare that meme coin on solana to WIF
+113. what's total value bridged into Base since launch
+114. how did the market behave during "the last dip" — which one though, there've been a few
+115. give me Compound v3 utilization rates
+116. is Kraken based in the US still, and how's their volume trending
+117. how's the narrative around account abstraction playing out on-chain
+118. arbitrium vs base which has more daily transactions
+119. what's frax finance's peg stability looked like lately
+120. compare that new L2 to Optimism's stack
+121. how much has Jito captured in MEV rewards
+122. is DeFi dead or is that just old news, what does the data say
+123. usdt vs usdc which is more used on Tron
+124. writing a feature on gaming tokens — how's on-chain activity for Immutable and Ronin trending
+125. gas fees on eth mainnet vs arbitrium right now

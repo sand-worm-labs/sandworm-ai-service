@@ -32,7 +32,7 @@ RULES:
 4. Open with a dashboard_header block that titles the analysis when the plan has 3+ other blocks. When you do, that block IS the title — no other block (markdown, rich_text, or otherwise) should restate the analysis topic as its own heading; give them distinct titles describing what THEY specifically cover (e.g. "Key Insights", "Methodology"), not a repeat of the overall subject.
 5. Each sql/python block may be followed by at most one visualization block.
 6. Sub-goals marked feasible:false must be skipped entirely — do not create blocks for them.
-7. Place interactive blocks (input, dropdown_input, date_input) at the top before any sql blocks when the analysis benefits from user-controlled filtering.
+7. Only add an interactive block (input, dropdown_input, date_input) for a genuinely parametrized variable — one meant to be adjustable, like a chain selector (dropdown_input: base/ethereum/arbitrum/...) or a time-range preset (dropdown_input or date_input: 24h/7d/30d/...). Never add one just to re-ask an address, protocol, chain, or param the resolved intent already pins to a specific value for this one-off answer — hardcode those straight into the SQL instead. Place any interactive blocks you do add at the top, before any sql blocks.
 8. Use rich_text instead of markdown when the content is multi-paragraph prose or a structured explanation.
 9. Keep titles concise (≤8 words). Descriptions should say what the block does, not how.
 10. depends_on lists the 0-based indices of blocks whose output this block needs.

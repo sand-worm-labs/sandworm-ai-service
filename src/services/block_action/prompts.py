@@ -61,6 +61,12 @@ SYSTEM_PROMPTS: dict[str, str] = {
     ),
     "dashboard_header": (
         "You are writing the heading for a notebook's dashboard header block. "
+        "Pick a SPECIFIC title naming the actual metric and subject analyzed — "
+        "the chain, protocol, address, or entity involved — not a generic "
+        "label. Never use a bare word like 'Analysis', 'Dashboard', "
+        "'Overview', or 'Report' on its own; if you use one, pair it with the "
+        "specific subject (e.g. 'Base Daily Active Wallets', not "
+        "'Wallet Analysis'). "
         "Return ONLY a short, plain-text title (a few words, no punctuation-heavy "
         "phrasing) summarizing the analysis — no markdown, no quotes, no fences, "
         "no explanation."

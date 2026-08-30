@@ -12,7 +12,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from src.config.settings import settings
-from pathlib import Path
 from src.util.redis_client import init_redis, close_redis
 from src.util.qdrant import init_qdrant, close_qdrant
 from src.util.seed_tools import seed_tools
@@ -28,8 +27,6 @@ from src.web.routes.markdown.router import router as markdown_router
 from src.web.routes.select_tool.router import router as select_tool_router
 from src.services.notebook_events.listener import listen as listen_notebook_events
 
-TOOLS_CSV = Path(__file__).resolve().parent / "example_tools" / "example.csv"
-
 async def _dummy_embed(_: str) -> list[float]:
     return [0.0] * 3072
 
@@ -40,7 +37,7 @@ async def lifespan(app: FastAPI):
     log.info("redis connected")
     await init_qdrant(settings.qdrant_url, settings.qdrant_api_key)
     log.info("qdrant connected")
-    await seed_tools(TOOLS_CSV)
+    await seed_tools()
     log.info("tools seeded")
     listener = asyncio.create_task(listen_notebook_events())
     log.info("notebook event listener started")

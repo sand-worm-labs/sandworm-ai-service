@@ -3,3 +3,4 @@
 !entrypoint.sh
 !pyproject.toml
 !poetry.lock
+!README.md

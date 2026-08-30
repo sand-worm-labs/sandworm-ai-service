@@ -1,77 +1,42 @@
 from __future__ import annotations
 
+import io
 import logging
+import tarfile
 
 import httpx
+import yaml
 
 log = logging.getLogger("sandworm.seed")
 
-from src.config.settings import settings
-from src.services.sandworm_tools.models import SandwormTool, ToolInput
+from src.services.sandworm_tools.models import SandwormTool
 from src.services.sandworm_tools.service import SandwormToolsService, COLLECTION
 from src.util.qdrant import collection_has_data
 
-GET_TOOLS_QUERY = """
-query GetTools {
-  getTools {
-    toolId
-    categoryId
-    description
-    tags
-    params
-    g1
-    g2
-    g3
-    g4
-    g5
-  }
-}
-"""
+# Fetched live over HTTP on every boot rather than vendored on disk (no git
+# submodule, no local copy) — sand-worm-labs/tools is the single source of
+# truth. One request for the whole catalog, parsed entirely in memory.
+CATALOG_TARBALL_URL = "https://codeload.github.com/sand-worm-labs/tools/tar.gz/refs/heads/main"
 
 
-async def _fetch_tools_from_api() -> list[SandwormTool]:
-    url = f"{settings.nest_base_url.rstrip('/')}/graphql"
-    async with httpx.AsyncClient() as client:
-        res = await client.post(url, json={"query": GET_TOOLS_QUERY}, timeout=30)
-        res.raise_for_status()
-        body = res.json()
+async def _fetch_tools() -> list[SandwormTool]:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+        response = await client.get(CATALOG_TARBALL_URL)
+        response.raise_for_status()
 
-    if "errors" in body:
-        raise RuntimeError(f"getTools query failed: {body['errors']}")
-
-    tools = []
-    for row in body["data"]["getTools"]:
-        try:
-            tags = row.get("tags") or []
-            description = row["description"]
-            if tags:
-                description = f"{description} (tags: {', '.join(tags)})"
-
-            inputs = [
-                ToolInput(
-                    key=p.get("key", ""),
-                    label=p.get("label", p.get("key", "")),
-                    type=p.get("type", "string"),
-                    required=p.get("required", False),
-                    default=p.get("default"),
-                )
-                for p in (row.get("params") or [])
-                if isinstance(p, dict)
-            ]
-
-            tools.append(SandwormTool(
-                tool_id=row["toolId"],
-                g1=row.get("g1") or row.get("categoryId") or None,
-                g2=row.get("g2") or None,
-                g3=row.get("g3") or None,
-                g4=row.get("g4") or None,
-                g5=row.get("g5") or None,
-                description=description,
-                inputs=inputs,
-            ))
-        except Exception as e:
-            log.warning("skipping row %s: %s", row.get("toolId"), e)
-            continue
+    tools: list[SandwormTool] = []
+    with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
+        for member in tar.getmembers():
+            if not member.isfile() or "/catalog/" not in member.name or not member.name.endswith(".yaml"):
+                continue
+            extracted = tar.extractfile(member)
+            if extracted is None:
+                continue
+            try:
+                data = yaml.safe_load(extracted.read())
+                tools.append(SandwormTool(**data))
+            except Exception as e:
+                log.warning("skipping %s: %s", member.name, e)
     return tools
 
 
@@ -80,12 +45,12 @@ async def seed_tools() -> None:
         log.info("collection already seeded, skipping")
         return
 
-    tools = await _fetch_tools_from_api()
+    tools = await _fetch_tools()
     if not tools:
-        log.warning("no tools fetched from getTools")
+        log.warning("no tools fetched from %s", CATALOG_TARBALL_URL)
         return
 
-    log.info("seeding %d tools from getTools", len(tools))
+    log.info("seeding %d tools from %s", len(tools), CATALOG_TARBALL_URL)
     service = SandwormToolsService()
     await service.upsert(tools)
     log.info("seeding complete")

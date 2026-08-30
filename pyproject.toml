@@ -18,6 +18,7 @@ orjson = "^3.11.5"
 httpx = "^0.28.0"
 aiohttp = { extras = ["speedups"], version = "^3.13.4" }
 qdrant-client = "^1.17.1"
+pyyaml = "^6.0.3"
 langchain-openrouter = ">=0.2.1"
 langchain = "^1.2.15"
 langgraph = "^1.1.6"

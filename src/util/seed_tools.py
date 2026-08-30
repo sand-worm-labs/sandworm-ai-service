@@ -1,72 +1,91 @@
 from __future__ import annotations
 
-import csv
-import json
 import logging
-from pathlib import Path
+
+import httpx
 
 log = logging.getLogger("sandworm.seed")
 
-from src.services.sandworm_tools.models import SandwormTool, ToolInput, ToolReturn
+from src.config.settings import settings
+from src.services.sandworm_tools.models import SandwormTool, ToolInput
 from src.services.sandworm_tools.service import SandwormToolsService, COLLECTION
 from src.util.qdrant import collection_has_data
 
+GET_TOOLS_QUERY = """
+query GetTools {
+  getTools {
+    toolId
+    categoryId
+    description
+    tags
+    params
+    g1
+    g2
+    g3
+    g4
+    g5
+  }
+}
+"""
 
-def _parse_tools(csv_path: Path) -> list[SandwormTool]:
+
+async def _fetch_tools_from_api() -> list[SandwormTool]:
+    url = f"{settings.nest_base_url.rstrip('/')}/graphql"
+    async with httpx.AsyncClient() as client:
+        res = await client.post(url, json={"query": GET_TOOLS_QUERY}, timeout=30)
+        res.raise_for_status()
+        body = res.json()
+
+    if "errors" in body:
+        raise RuntimeError(f"getTools query failed: {body['errors']}")
+
     tools = []
-    with csv_path.open() as f:
-        for row in csv.DictReader(f):
-            try:
-                raw_returns = json.loads(row.get("returns") or "[]")
-                returns = [
-                    ToolReturn(name=r.split(":")[0], type=r.split(":")[1] if ":" in r else "string")
-                    if isinstance(r, str)
-                    else ToolReturn(name=r.get("key", ""), type=r.get("type", "string"))
-                    for r in raw_returns
-                ]
+    for row in body["data"]["getTools"]:
+        try:
+            tags = row.get("tags") or []
+            description = row["description"]
+            if tags:
+                description = f"{description} (tags: {', '.join(tags)})"
 
-                raw_inputs = json.loads(row.get("inputs") or "[]")
-                inputs = [
-                    ToolInput(
-                        key=i.get("key", ""),
-                        label=i.get("label", i.get("key", "")),
-                        type=i.get("type", "string"),
-                        required=i.get("required", False),
-                        default=i.get("default"),
-                    )
-                    for i in raw_inputs
-                    if isinstance(i, dict)
-                ]
+            inputs = [
+                ToolInput(
+                    key=p.get("key", ""),
+                    label=p.get("label", p.get("key", "")),
+                    type=p.get("type", "string"),
+                    required=p.get("required", False),
+                    default=p.get("default"),
+                )
+                for p in (row.get("params") or [])
+                if isinstance(p, dict)
+            ]
 
-                tools.append(SandwormTool(
-                    tool_id=row["tool_id"],
-                    g1=row.get("g1") or None,
-                    g2=row.get("g2") or None,
-                    g3=row.get("g3") or None,
-                    g4=row.get("g4") or None,
-                    g5=row.get("g5") or None,
-                    description=row.get("description", ""),
-                    scope=row.get("scope", "generic"),
-                    returns=returns,
-                    inputs=inputs,
-                ))
-            except Exception as e:
-                log.warning("skipping row %s: %s", row.get("tool_id"), e)
-                continue
+            tools.append(SandwormTool(
+                tool_id=row["toolId"],
+                g1=row.get("g1") or row.get("categoryId") or None,
+                g2=row.get("g2") or None,
+                g3=row.get("g3") or None,
+                g4=row.get("g4") or None,
+                g5=row.get("g5") or None,
+                description=description,
+                inputs=inputs,
+            ))
+        except Exception as e:
+            log.warning("skipping row %s: %s", row.get("toolId"), e)
+            continue
     return tools
 
 
-async def seed_tools(csv_path: Path) -> None:
+async def seed_tools() -> None:
     if await collection_has_data(COLLECTION):
         log.info("collection already seeded, skipping")
         return
 
-    tools = _parse_tools(csv_path)
+    tools = await _fetch_tools_from_api()
     if not tools:
-        log.warning("no tools parsed from %s", csv_path)
+        log.warning("no tools fetched from getTools")
         return
 
-    log.info("seeding %d tools from %s", len(tools), csv_path)
+    log.info("seeding %d tools from getTools", len(tools))
     service = SandwormToolsService()
     await service.upsert(tools)
     log.info("seeding complete")

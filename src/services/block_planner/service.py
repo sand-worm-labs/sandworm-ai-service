@@ -43,13 +43,22 @@ def _format_possible_tools(tools: list[dict[str, Any]]) -> str:
 
     lines = [
         "**Possibly relevant existing tools:** only plan a power_toolbox block "
-        "for a need one of these actually covers — if nothing here fits, use a "
-        "different block type (sql/python) for that sub-goal instead of "
-        "guessing a power_toolbox block into existence."
+        "for a need one of these actually covers — matching by description "
+        "alone isn't enough. Check each tool's required inputs too: you must "
+        "be able to fill every one with a real value already pinned down by "
+        "the intent (an address, a date, a number) — not a guess. If nothing "
+        "here both fits AND has fillable required inputs, use a different "
+        "block type (sql/python) for that sub-goal instead of guessing a "
+        "power_toolbox block into existence."
     ]
     for tool in tools:
         tags = " > ".join(t for t in [tool.get("g1"), tool.get("g2"), tool.get("g3"), tool.get("g4"), tool.get("g5")] if t)
-        lines.append(f"- {tool['tool_id']} ({tags}): {tool['description']}")
+        inputs_schema = tool.get("inputs") or []
+        inputs_desc = ", ".join(
+            f"{i['key']}{' (required)' if i.get('required') else ''}"
+            for i in inputs_schema
+        ) or "none"
+        lines.append(f"- {tool['tool_id']} ({tags}): {tool['description']} | inputs: {inputs_desc}")
 
     return "\n".join(lines)
 

@@ -24,10 +24,16 @@ INTERACTIVE BLOCKS (user-driven parameters — use only when the analysis benefi
 - date_input     — a date or date-range picker
 - power_toolbox  — a specialized pre-built analytical tool. Only use this for a tool
                     actually listed under "Possibly relevant existing tools" below (when
-                    that section is present) — never invent or assume one exists.
+                    that section is present) — never invent or assume one exists. PREFER
+                    this over sql/python whenever a listed tool genuinely covers the
+                    sub-goal — it's already built, tested, and faster than hand-writing
+                    an equivalent query.
 
 RULES:
-1. Every sub_goal marked feasible:true needs at least one sql block.
+1. For every sub_goal marked feasible:true, first check whether a tool in "Possibly
+   relevant existing tools" genuinely covers it — if so, use a power_toolbox block for
+   that sub-goal instead of sql. Only fall back to a sql block (pulling raw data from
+   Dune) when no listed tool fits, or that section is absent entirely.
 2. A visualization or pivot_table block must always follow a sql or python block it depends on — set depends_on to that block's 0-based index.
 3. For a further transformation on a prior SQL block's result, prefer a second sql block that depends_on it (a local follow-up query) over a python block, unless the transformation genuinely needs pandas/numpy (e.g. a statistical model, a rolling window, logic no SQL can express cleanly).
 11. Don't cram a whole sub-goal into one sql block. If it naturally breaks into a raw data pull plus separate filtering/joining/aggregation/metric steps, plan it as multiple chained sql blocks (each depends_on the one before it) rather than one large query — smaller, focused queries are more likely to actually work.
@@ -38,7 +44,6 @@ RULES:
 8. Use rich_text instead of markdown when the content is multi-paragraph prose or a structured explanation.
 9. Keep titles concise (≤8 words). Descriptions should say what the block does, not how.
 10. depends_on lists the 0-based indices of blocks whose output this block needs.
-12. If a "Possibly relevant existing tools" section is given, it's the full set of tools you're allowed to use for power_toolbox — if a sub-goal doesn't match any of them, cover it with sql/python instead rather than planning a power_toolbox block anyway.
 
 Output ONLY valid JSON matching this schema — no markdown, no explanation:
 {"blocks":[{"type":"sql|python|visualization|pivot_table|markdown|rich_text|dashboard_header|input|dropdown_input|date_input|power_toolbox","title":"...","description":"...","depends_on":[]},...]}"""

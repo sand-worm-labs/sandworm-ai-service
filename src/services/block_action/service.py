@@ -31,14 +31,18 @@ EXECUTABLE_TYPES = {"sql", "python"}
 # These block types are inserted by the Node side as empty widgets/config —
 # it doesn't apply generated freeform text to them (see addBlocks in
 # apps/api/.../ai-blocks.ts), so skip the LLM call rather than generate
-# content that would just be discarded.
-NO_CONTENT_TYPES = {
-    "pivot_table",
-}
+# content that would just be discarded. pivot_table is handled separately
+# (see _select_pivot_config) — it does get real generated content now, just
+# not through the generic SYSTEM_PROMPTS[block.type] path below.
+NO_CONTENT_TYPES: set[str] = set()
 
 # How many candidate tools to hand the LLM for power_toolbox selection — top-1
 # by raw embedding similarity alone isn't reliable enough to auto-select on.
 POWER_TOOL_CANDIDATES = 5
+
+# Matches AggregateFunction in packages/types/src/index.ts — kept in sync by
+# hand since that's a TS/zod type this Python service can't import directly.
+VALID_AGGREGATE_FUNCTIONS = {"sum", "mean", "median", "count", "min", "max"}
 
 
 _DATAFRAMES_SECTION_RE = re.compile(r"## DATAFRAMES\n\n(.*?)(?=\n\n## |\Z)", re.DOTALL)
@@ -124,6 +128,10 @@ def _user_message(
                     f"**Actual result of preceding block:** it ran successfully — "
                     f"{outcome.get('summary')}."
                 )
+                columns = outcome.get("columns")
+                if columns:
+                    col_desc = ", ".join(f"{c['name']} ({c['type']})" for c in columns)
+                    parts.append(f"**Actual columns:** {col_desc}")
 
         if dep.type == "sql" and dep.dataframe_name:
             # The dependency already ran against Dune (or a prior local step) and
@@ -209,12 +217,24 @@ class BlockActionService:
 
             if block.type == "sql":
                 generated_block.dataframe_name = _dataframe_name(job_id, index)
+            elif block.type in ("pivot_table", "visualization") and block.depends_on:
+                # Node needs a real dataframeName to wire these up to actual
+                # data (see addBlocks on the Node side) — only resolvable here
+                # when the dependency is sql, whose dataframe_name is assigned
+                # deterministically above before the query even runs. A python
+                # dependency's output variable name isn't known at this point,
+                # so this stays unresolved (same as before) for that case.
+                dep_idx = block.depends_on[0]
+                if dep_idx < len(generated) and generated[dep_idx].dataframe_name:
+                    generated_block.dataframe_name = generated[dep_idx].dataframe_name
 
             if self.envelope:
                 await self.envelope.block_generating(generated_block.id, block.type, block.title)
 
             if block.type == "power_toolbox":
                 content = await self._select_power_tool(block, intent, generated, block_results)
+            elif block.type == "pivot_table":
+                content = await self._select_pivot_config(block, intent, generated, block_results)
             elif block.type in NO_CONTENT_TYPES:
                 content = ""
             else:
@@ -318,12 +338,20 @@ class BlockActionService:
 
         system = (
             "You are picking the best-fitting Sandworm power tool for this task "
-            "from the candidates below, then filling in its inputs. Return ONLY "
-            "a JSON object: {\"tool_id\": \"<chosen tool_id, must be exactly one "
-            "of the candidates>\", \"inputs\": {<input key>: <value>, ...}} — no "
+            "from the candidates below, then filling in its inputs. Fit is NOT "
+            "just about the description reading similarly — for each candidate, "
+            "check its actual inputs schema: every input marked required must "
+            "have a real, specific value you can derive from the task/intent "
+            "below (an address, a date, a number, etc.), not a guess or "
+            "placeholder. A tool whose description matches but whose required "
+            "inputs can't actually be filled is NOT a fit — reject it and check "
+            "the next candidate instead. Return ONLY a JSON object: "
+            "{\"tool_id\": \"<chosen tool_id, must be exactly one of the "
+            "candidates>\", \"inputs\": {<input key>: <value>, ...}} — no "
             "markdown, no explanation, no input keys outside that tool's own "
-            "schema. If none of the candidates genuinely fit the task, return "
-            "{\"tool_id\": null, \"inputs\": {}} instead of forcing a bad match."
+            "schema. If NONE of the candidates both fit the task AND have all "
+            "required inputs fillable, return {\"tool_id\": null, \"inputs\": "
+            "{}} instead of forcing a bad match."
         )
         user = (
             _user_message(block, intent, prior_blocks, block_results)
@@ -346,3 +374,89 @@ class BlockActionService:
             return json.dumps({"tool_id": None, "inputs": {}})
 
         return json.dumps({"tool_id": tool_id, "inputs": result.get("inputs") or {}})
+
+    # pivot_table has no freeform "content" either — it needs real rows/
+    # columns/metrics picked from its dependency's ACTUAL result columns
+    # (Node discards anything else — dataframeName is all it accepts as a
+    # dependency-derived field, see buildBlockSpec on the Node side). Content
+    # here is a JSON config Node parses to build those, not display text.
+    async def _select_pivot_config(
+        self,
+        block: PlannedBlock,
+        intent: Intent,
+        prior_blocks: list[GeneratedBlock],
+        block_results: dict[int, dict | None] | None = None,
+    ) -> str:
+        empty = json.dumps({"rows": [], "columns": [], "metrics": []})
+
+        if not block.depends_on:
+            return empty
+
+        outcome = (block_results or {}).get(block.depends_on[0])
+        columns = (outcome or {}).get("columns") if outcome else None
+        if not columns:
+            # No real column list to reason about (dependency wasn't sql, or
+            # didn't run/failed) — leave it for a human to configure rather
+            # than guessing column names that may not exist.
+            return empty
+
+        columns_by_name = {c["name"]: c for c in columns}
+        columns_desc = "\n".join(f"- {c['name']} ({c['type']})" for c in columns)
+
+        system = (
+            "You are configuring a pivot table over the real columns listed "
+            "below, based on the task. Pick which columns are grouping "
+            "dimensions (rows), which are pivot columns (usually none/empty "
+            "unless the task genuinely calls for a cross-tab), and which are "
+            "aggregated metrics. A metric's aggregateFunction must be exactly "
+            "one of: sum, mean, median, count, min, max — pick one that makes "
+            "sense for that column's type (never sum/mean a non-numeric "
+            "column). Return ONLY a JSON object: {\"rows\": [\"<column "
+            "name>\", ...], \"columns\": [\"<column name>\", ...], "
+            "\"metrics\": [{\"column\": \"<column name>\", \"aggregateFunction\": "
+            "\"<one of the six above>\"}, ...]} — every column name used MUST "
+            "be exactly one of the real columns listed below, no invented "
+            "ones. rows/columns/metrics may be empty arrays if nothing in the "
+            "task calls for them, but at least one metric is expected in the "
+            "typical case."
+        )
+        user = (
+            _user_message(block, intent, prior_blocks, block_results)
+            + f"\n\n**Real columns available:**\n{columns_desc}"
+        )
+
+        response = await self.llm.ainvoke([
+            SystemMessage(content=system),
+            HumanMessage(content=user),
+        ])
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.content.strip())
+        try:
+            result = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return empty
+
+        # Resolve by name to the REAL known column dict rather than trusting
+        # whatever `type` string the LLM might echo back — the ground truth
+        # Node already published is what actually matters downstream.
+        def _valid_column_refs(names: object) -> list[dict[str, str]]:
+            if not isinstance(names, list):
+                return []
+            return [columns_by_name[n] for n in names if isinstance(n, str) and n in columns_by_name]
+
+        def _valid_metrics(metrics: object) -> list[dict]:
+            if not isinstance(metrics, list):
+                return []
+            out: list[dict] = []
+            for m in metrics:
+                if not isinstance(m, dict):
+                    continue
+                col, agg = m.get("column"), m.get("aggregateFunction")
+                if col in columns_by_name and agg in VALID_AGGREGATE_FUNCTIONS:
+                    out.append({"column": columns_by_name[col], "aggregateFunction": agg})
+            return out
+
+        return json.dumps({
+            "rows": _valid_column_refs(result.get("rows")),
+            "columns": _valid_column_refs(result.get("columns")),
+            "metrics": _valid_metrics(result.get("metrics")),
+        })

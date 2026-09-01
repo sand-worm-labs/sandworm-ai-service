@@ -35,19 +35,24 @@ class SandwormToolsService:
     def __init__(self):
         self._client = get_qdrant()
 
-    async def _embed_batch(self, texts: list[str]) -> list[list[float]]:
+    # api_key is None for upserting the catalog into the vector DB (a
+    # background/admin operation with no user attached — the system's own
+    # OPENROUTER_EMBEDDING_KEY pays for it) and the requesting user's own
+    # OpenRouter key for a live search (see search() below) — their usage,
+    # their key.
+    async def _embed_batch(self, texts: list[str], api_key: str | None = None) -> list[list[float]]:
         async with httpx.AsyncClient() as client:
             res = await client.post(
                 "https://openrouter.ai/api/v1/embeddings",
-                headers={"Authorization": f"Bearer {settings.OPENROUTER_EMBEDDING_KEY}"},
+                headers={"Authorization": f"Bearer {api_key or settings.OPENROUTER_EMBEDDING_KEY}"},
                 json={"model": "openai/text-embedding-3-large", "input": texts},
                 timeout=60,
             )
             res.raise_for_status()
             return [item["embedding"] for item in res.json()["data"]]
 
-    async def embed(self, text: str) -> list[float]:
-        return (await self._embed_batch([text]))[0]
+    async def embed(self, text: str, api_key: str | None = None) -> list[float]:
+        return (await self._embed_batch([text], api_key))[0]
 
     async def upsert(self, tools: list[SandwormTool], batch_size: int = 400) -> None:
         for i in range(0, len(tools), batch_size):
@@ -82,8 +87,9 @@ class SandwormToolsService:
         query: str,
         top_k: int = 5,
         filter_g1: str | None = None,
+        api_key: str | None = None,
     ) -> list[dict[str, Any]]:
-        vector = await self.embed(query)
+        vector = await self.embed(query, api_key)
 
         qdrant_filter = None
         if filter_g1:

@@ -2,16 +2,56 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import Any
 
 from pydantic import ValidationError
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
+from src.services.intent.models import Intent
+from src.services.sandworm_tools.service import SandwormToolsService
 from src.util.llm_json import LLMJSONError, parse_json_object
 
-from .models import PlanBlocksRequest, BlockPlan
+from .models import PlanBlocksRequest, BlockPlan, PlannedBlock
 from .prompts import SYSTEM_PROMPT
 
 log = logging.getLogger("sandworm.block_planner")
+
+# How many candidate tools to surface per sub-goal — enough for the planner
+# to recognize a real fit without bloating the prompt with irrelevant ones.
+POSSIBLE_TOOLS_PER_SUBGOAL = 3
+
+
+async def _search_possible_tools(tools: SandwormToolsService, intent: Intent, api_key: str) -> list[dict[str, Any]]:
+    # Search per sub-goal (each already a decomposed piece of the analysis)
+    # rather than one broad query on intent.goal — sharper matches for
+    # multi-part asks. Falls back to the overall goal when there are no
+    # feasible sub-goals at all.
+    queries = [sg.goal for sg in intent.sub_goals if sg.feasible] or [intent.goal]
+
+    seen: dict[str, dict[str, Any]] = {}
+    for query in queries:
+        matches = await tools.search(query=query, top_k=POSSIBLE_TOOLS_PER_SUBGOAL, api_key=api_key)
+        for match in matches:
+            seen.setdefault(match["tool_id"], match)
+
+    return list(seen.values())
+
+
+def _format_possible_tools(tools: list[dict[str, Any]]) -> str:
+    if not tools:
+        return ""
+
+    lines = [
+        "**Possibly relevant existing tools:** only plan a power_toolbox block "
+        "for a need one of these actually covers — if nothing here fits, use a "
+        "different block type (sql/python) for that sub-goal instead of "
+        "guessing a power_toolbox block into existence."
+    ]
+    for tool in tools:
+        tags = " > ".join(t for t in [tool.get("g1"), tool.get("g2"), tool.get("g3"), tool.get("g4"), tool.get("g5")] if t)
+        lines.append(f"- {tool['tool_id']} ({tags}): {tool['description']}")
+
+    return "\n".join(lines)
 
 
 def _intent_summary(req: PlanBlocksRequest) -> str:
@@ -49,11 +89,44 @@ class PlanBlocksService:
     def __init__(self, req: PlanBlocksRequest):
         self.llm = make_llm(req.openrouter_api_key, req.model)
         self.req = req
+        self.tools = SandwormToolsService()
+
+    # Belt-and-suspenders: _search_possible_tools already shows the planner
+    # only real candidates before it plans, but an LLM can still ignore that
+    # and name a power_toolbox block anyway. Re-check with the same search
+    # BlockActionService uses at generation time (_select_power_tool) so a
+    # block with no real matching tool never survives into the plan, rather
+    # than reaching generation and becoming a dead tool_id: None block.
+    async def _drop_unmatched_power_toolbox_blocks(self, plan: BlockPlan) -> BlockPlan:
+        kept: list[PlannedBlock] = []
+        index_map: dict[int, int] = {}
+
+        for old_idx, block in enumerate(plan.blocks):
+            if block.type == "power_toolbox":
+                matches = await self.tools.search(query=block.description, top_k=1, api_key=self.req.openrouter_api_key)
+                if not matches:
+                    log.info("dropping power_toolbox block %r — no matching tool found", block.title)
+                    continue
+
+            index_map[old_idx] = len(kept)
+            kept.append(block)
+
+        for block in kept:
+            block.depends_on = [index_map[d] for d in block.depends_on if d in index_map]
+
+        return BlockPlan(blocks=kept)
 
     async def plan(self) -> BlockPlan:
+        possible_tools = await _search_possible_tools(self.tools, self.req.intent, self.req.openrouter_api_key)
+        tools_context = _format_possible_tools(possible_tools)
+
+        intent_summary = _intent_summary(self.req)
+        if tools_context:
+            intent_summary = f"{intent_summary}\n\n{tools_context}"
+
         messages = [
             SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=_intent_summary(self.req)),
+            HumanMessage(content=intent_summary),
         ]
 
         last_exc: Exception | None = None
@@ -62,7 +135,8 @@ class PlanBlocksService:
         for attempt in range(1, MAX_PLAN_ATTEMPTS + 1):
             response = await self.llm.ainvoke(messages)
             try:
-                return _parse_plan(response.content)
+                plan = _parse_plan(response.content)
+                return await self._drop_unmatched_power_toolbox_blocks(plan)
             except (LLMJSONError, ValidationError) as exc:
                 last_exc = exc
                 log.warning(

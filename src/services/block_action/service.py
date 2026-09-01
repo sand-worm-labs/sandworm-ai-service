@@ -36,6 +36,10 @@ NO_CONTENT_TYPES = {
     "pivot_table",
 }
 
+# How many candidate tools to hand the LLM for power_toolbox selection — top-1
+# by raw embedding similarity alone isn't reliable enough to auto-select on.
+POWER_TOOL_CANDIDATES = 5
+
 
 _DATAFRAMES_SECTION_RE = re.compile(r"## DATAFRAMES\n\n(.*?)(?=\n\n## |\Z)", re.DOTALL)
 
@@ -158,6 +162,7 @@ def _sql_data_source(content: str, known_names: set[str]) -> str:
 
 class BlockActionService:
     def __init__(self, api_key: str, model: str, envelope: StreamEnvelope | None = None):
+        self.api_key = api_key
         self.llm = make_llm(api_key, model)
         self.envelope = envelope
         self.tools = SandwormToolsService()
@@ -286,9 +291,10 @@ class BlockActionService:
             )
 
     # power_toolbox has no freeform "content" — it needs a real tool_id plus
-    # inputs matching that tool's declared schema. Find the best-matching
-    # tool via the same embedding search used for tool selection elsewhere,
-    # then have the LLM fill in its inputs from the task/intent.
+    # inputs matching that tool's declared schema. Pull the top-N candidates
+    # via the same embedding search used for tool selection elsewhere, then
+    # let the LLM pick the actual best fit among them and fill in its inputs,
+    # in one call.
     async def _select_power_tool(
         self,
         block: PlannedBlock,
@@ -296,27 +302,33 @@ class BlockActionService:
         prior_blocks: list[GeneratedBlock],
         block_results: dict[int, dict | None] | None = None,
     ) -> str:
-        matches = await self.tools.search(query=block.description, top_k=1)
+        matches = await self.tools.search(query=block.description, top_k=POWER_TOOL_CANDIDATES, api_key=self.api_key)
         if not matches:
             return json.dumps({"tool_id": None, "inputs": {}})
 
-        tool = matches[0]
-        tool_id = tool["tool_id"]
-        inputs_schema = tool.get("inputs") or []
+        def _describe(tool: dict) -> str:
+            inputs_schema = tool.get("inputs") or []
+            inputs_desc = "\n".join(
+                f"  - {i['key']} ({i['type']}{', required' if i.get('required') else ''}): {i['label']}"
+                for i in inputs_schema
+            ) or "  (no inputs)"
+            return f"### {tool['tool_id']}\n{tool['description']}\nInputs:\n{inputs_desc}"
 
-        if not inputs_schema:
-            return json.dumps({"tool_id": tool_id, "inputs": {}})
+        candidates_desc = "\n\n".join(_describe(m) for m in matches)
 
-        schema_desc = "\n".join(
-            f"- {i['key']} ({i['type']}{', required' if i.get('required') else ''}): {i['label']}"
-            for i in inputs_schema
-        )
         system = (
-            "You are filling in the inputs for a Sandworm power tool, based on the "
-            "task. Return ONLY a JSON object mapping each input key to its value — "
-            "no markdown, no explanation, no keys outside the given schema."
+            "You are picking the best-fitting Sandworm power tool for this task "
+            "from the candidates below, then filling in its inputs. Return ONLY "
+            "a JSON object: {\"tool_id\": \"<chosen tool_id, must be exactly one "
+            "of the candidates>\", \"inputs\": {<input key>: <value>, ...}} — no "
+            "markdown, no explanation, no input keys outside that tool's own "
+            "schema. If none of the candidates genuinely fit the task, return "
+            "{\"tool_id\": null, \"inputs\": {}} instead of forcing a bad match."
         )
-        user = _user_message(block, intent, prior_blocks, block_results) + f"\n\n**Tool inputs schema:**\n{schema_desc}"
+        user = (
+            _user_message(block, intent, prior_blocks, block_results)
+            + f"\n\n**Candidate tools:**\n{candidates_desc}"
+        )
 
         response = await self.llm.ainvoke([
             SystemMessage(content=system),
@@ -324,8 +336,13 @@ class BlockActionService:
         ])
         raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.content.strip())
         try:
-            values = json.loads(raw)
+            result = json.loads(raw)
         except (json.JSONDecodeError, ValueError):
-            values = {}
+            return json.dumps({"tool_id": None, "inputs": {}})
 
-        return json.dumps({"tool_id": tool_id, "inputs": values})
+        tool_id = result.get("tool_id")
+        valid_ids = {m["tool_id"] for m in matches}
+        if tool_id not in valid_ids:
+            return json.dumps({"tool_id": None, "inputs": {}})
+
+        return json.dumps({"tool_id": tool_id, "inputs": result.get("inputs") or {}})

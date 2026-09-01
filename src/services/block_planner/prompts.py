@@ -22,7 +22,9 @@ INTERACTIVE BLOCKS (user-driven parameters — use only when the analysis benefi
 - input          — a free-text parameter (e.g. wallet address, token symbol)
 - dropdown_input — a fixed-choice selector (e.g. chain, time range preset)
 - date_input     — a date or date-range picker
-- power_toolbox  — a specialized pre-built analytical tool
+- power_toolbox  — a specialized pre-built analytical tool. Only use this for a tool
+                    actually listed under "Possibly relevant existing tools" below (when
+                    that section is present) — never invent or assume one exists.
 
 RULES:
 1. Every sub_goal marked feasible:true needs at least one sql block.
@@ -36,6 +38,7 @@ RULES:
 8. Use rich_text instead of markdown when the content is multi-paragraph prose or a structured explanation.
 9. Keep titles concise (≤8 words). Descriptions should say what the block does, not how.
 10. depends_on lists the 0-based indices of blocks whose output this block needs.
+12. If a "Possibly relevant existing tools" section is given, it's the full set of tools you're allowed to use for power_toolbox — if a sub-goal doesn't match any of them, cover it with sql/python instead rather than planning a power_toolbox block anyway.
 
 Output ONLY valid JSON matching this schema — no markdown, no explanation:
 {"blocks":[{"type":"sql|python|visualization|pivot_table|markdown|rich_text|dashboard_header|input|dropdown_input|date_input|power_toolbox","title":"...","description":"...","depends_on":[]},...]}"""

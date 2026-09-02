@@ -12,7 +12,7 @@ from src.util.stream_events import StreamEnvelope
 
 from src.services.block_planner.models import BlockPlan, PlannedBlock
 from src.services.intent.models import Intent
-from .model import GeneratedBlock
+from .model import DUCKDB, DUNE, GeneratedBlock, SqlDataSource
 from .prompts import SYSTEM_PROMPTS
 
 log = logging.getLogger("sandworm.block_action")
@@ -155,7 +155,7 @@ def _dataframe_name(job_id: str | None, index: int) -> str:
     return f"aiq_{token}_{index}"
 
 
-def _sql_data_source(content: str, known_names: set[str]) -> str:
+def _sql_data_source(content: str, known_names: set[str]) -> SqlDataSource:
     # Routing is decided from what the model actually wrote, not from the
     # planner's declared depends_on graph — depends_on only captures the
     # dependency graph the planner thought to declare, but the model is told
@@ -165,7 +165,7 @@ def _sql_data_source(content: str, known_names: set[str]) -> str:
     # entry gets sent to Trino, which can't resolve a pandas variable as a
     # catalog table. The content is ground truth: if it names a known
     # dataframe, it's a local DuckDB query; otherwise it's a fresh Dune pull.
-    return "duckdb" if _references_dataframe(content, known_names) else "dune"
+    return DUCKDB if _references_dataframe(content, known_names) else DUNE
 
 
 class BlockActionService:

@@ -31,6 +31,13 @@ class PipelineState:
     model: str
     api_key: str
     context: ChatContext
+    # Configured on the Node side via AI_CHAT_TEMPERATURE/AI_CHAT_MAX_TOKENS
+    # (apps/api's ai-service.config.ts -> chat.service.ts's /chat/completions
+    # payload) — only meaningful for node_complete's free-text reply below,
+    # not the structured JSON steps (intent/plan/block content), which stay
+    # on make_llm's own deterministic default regardless of this.
+    temperature: float = 0.7
+    max_tokens: int | None = None
     job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     parsed_intent: ParsedIntent | None = None
     block_plan: BlockPlan | None = None

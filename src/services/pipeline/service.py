@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import time
 import uuid
@@ -30,6 +31,13 @@ class PipelineState:
     model: str
     api_key: str
     context: ChatContext
+    # Configured on the Node side via AI_CHAT_TEMPERATURE/AI_CHAT_MAX_TOKENS
+    # (apps/api's ai-service.config.ts -> chat.service.ts's /chat/completions
+    # payload) — only meaningful for node_complete's free-text reply below,
+    # not the structured JSON steps (intent/plan/block content), which stay
+    # on make_llm's own deterministic default regardless of this.
+    temperature: float = 0.7
+    max_tokens: int | None = None
     job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     parsed_intent: ParsedIntent | None = None
     block_plan: BlockPlan | None = None
@@ -126,12 +134,96 @@ async def node_generate_blocks(state: PipelineState, envelope: StreamEnvelope) -
     return state
 
 
+def _content_preview(content: str, max_len: int = 160) -> str:
+    preview = " ".join(content.strip().split())
+    if len(preview) > max_len:
+        preview = preview[:max_len] + "…"
+    return preview
+
+
+def _summarize_generated_blocks(blocks: list[GeneratedBlock]) -> str:
+    # A prose instruction to "describe the notebook accurately" isn't a
+    # strong enough constraint on its own — the model can still default to
+    # whatever it would normally propose (usually SQL) instead of actually
+    # reading the block type out of a big <notebook> markdown blob. Spell out
+    # exactly what got generated this turn, per block type, in a form that
+    # can't be misread or reduced to "a SQL block" by default.
+    lines: list[str] = []
+    for b in blocks:
+        if b.type == "power_toolbox":
+            try:
+                tool_id = json.loads(b.content).get("tool_id") or "(none)"
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                tool_id = "(none)"
+            lines.append(
+                f'- POWER_TOOLBOX block "{b.title}" — tool: {tool_id}. '
+                f"Configured only, NOT executed — needs a human to click Run "
+                f"before it has a result."
+            )
+        elif b.type == "sql":
+            lines.append(
+                f'- SQL block "{b.title}" — queries {b.data_source or "sql"}, '
+                f"result stored as dataframe `{b.dataframe_name}`. Auto-run by "
+                f"the backend already — check <notebook> for the real "
+                f"success/error outcome rather than assuming it worked."
+            )
+        elif b.type == "python":
+            lines.append(
+                f'- PYTHON block "{b.title}" — {_content_preview(b.content) or "(no code)"}. '
+                f"Auto-run by the backend already — check <notebook> for the "
+                f"real success/error outcome rather than assuming it worked."
+            )
+        elif b.type == "visualization":
+            lines.append(
+                f'- VISUALIZATION block "{b.title}" — a chart built from a '
+                f"prior block's data. Auto-run by the backend already."
+            )
+        elif b.type == "pivot_table":
+            lines.append(
+                f'- PIVOT_TABLE block "{b.title}" — a tabular summary view; '
+                f"empty until its dataframe/rows/columns are configured."
+            )
+        elif b.type == "markdown":
+            lines.append(f'- MARKDOWN block "{b.title}" — {_content_preview(b.content) or "(empty)"}')
+        elif b.type == "rich_text":
+            lines.append(f'- RICH_TEXT block "{b.title}" — {_content_preview(b.content) or "(empty)"}')
+        elif b.type == "dashboard_header":
+            # upsertDashboardHeaderBlock sets the document's own title with
+            # this content — it is NOT a visible block in the notebook body.
+            lines.append(f'- Set the notebook\'s title to "{b.content.strip()}".')
+        elif b.type == "input":
+            lines.append(f'- INPUT block "{b.title}" — default value: `{b.content.strip() or "(none)"}`.')
+        elif b.type == "dropdown_input":
+            options = [o.strip() for o in b.content.splitlines() if o.strip()]
+            lines.append(f'- DROPDOWN_INPUT block "{b.title}" — options: {", ".join(options) or "(none)"}.')
+        elif b.type == "date_input":
+            lines.append(f'- DATE_INPUT block "{b.title}" — default date: `{b.content.strip() or "(none)"}`.')
+        else:
+            lines.append(f'- {b.type.upper()} block "{b.title}".')
+    return "\n".join(lines)
+
+
 async def node_complete(state: PipelineState, envelope: StreamEnvelope, chat_id: str | None) -> PipelineState:
     messages = state.messages
 
     if state.notebook_markdown:
         messages = [
             Message(role="system", content=f"<notebook>\n{state.notebook_markdown}\n</notebook>"),
+            *messages,
+        ]
+
+    if state.generated_blocks:
+        messages = [
+            Message(
+                role="system",
+                content=(
+                    "You generated the following block(s) THIS TURN. Your reply "
+                    "must describe exactly these — their real types, not "
+                    "something else — never a different or contradictory "
+                    "approach as if nothing had been done:\n"
+                    + _summarize_generated_blocks(state.generated_blocks)
+                ),
+            ),
             *messages,
         ]
 
@@ -217,6 +309,12 @@ async def run_pipeline(state: PipelineState) -> PipelineState:
 
             if await _stop_if_cancelled(chat_id, envelope, "after block generation"):
                 return state
+
+            # The blocks just generated above are now live in the notebook —
+            # refetch so the closing chat reply is grounded in what was
+            # ACTUALLY just added/run, not the pre-generation snapshot
+            # node_fetch_notebook_context took before planning even started.
+            state = await node_fetch_notebook_context(state)
 
         state = await node_complete(state, envelope, chat_id)
         await envelope.message_stop()

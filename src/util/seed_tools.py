@@ -24,10 +24,13 @@ async def _fetch_tools() -> list[SandwormTool]:
         response = await client.get(CATALOG_TARBALL_URL)
         response.raise_for_status()
 
+    # Only tool.yaml (metadata) matters here — this service only picks which
+    # tool + what inputs via semantic search, it never renders or executes
+    # anything, so the sibling template.py is irrelevant to it.
     tools: list[SandwormTool] = []
     with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
         for member in tar.getmembers():
-            if not member.isfile() or "/catalog/" not in member.name or not member.name.endswith(".yaml"):
+            if not member.isfile() or "/catalog/" not in member.name or not member.name.endswith("/tool.yaml"):
                 continue
             extracted = tar.extractfile(member)
             if extracted is None:

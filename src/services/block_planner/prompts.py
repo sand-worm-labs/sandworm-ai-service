@@ -9,7 +9,11 @@ ANALYSIS BLOCKS (core computation):
                     run a follow-up SQL query (filter, join, aggregate, compute a metric)
                     against that block's already-fetched result, entirely locally — no
                     second trip to Dune.
-- python         — data transformation, computation, or post-processing using pandas/numpy
+- python         — data transformation, computation, or post-processing using pandas/numpy.
+                    Also the block for a sub-goal whose reason says it needs a specific
+                    off-chain API (DeFiLlama, CoinGecko, L2Beat, etc.) — for that case it
+                    IS the first block for the sub-goal: a plain HTTP request to that API,
+                    not a follow-up transform, and never a sql block.
 - visualization  — a plotly chart rendered from a prior SQL or Python block's output
 - pivot_table    — tabular summary view of a prior SQL or Python block's output
 
@@ -44,6 +48,7 @@ RULES:
 8. Use rich_text instead of markdown when the content is multi-paragraph prose or a structured explanation.
 9. Keep titles concise (≤8 words). Descriptions should say what the block does, not how.
 10. depends_on lists the 0-based indices of blocks whose output this block needs.
+12. A sub_goal whose reason names a specific external API (DeFiLlama, CoinGecko, etc.) rather than a published report/attestation starts with a python block that fetches from that API directly — never a sql block for it, and never fabricate the data if no such fetch is planned.
 
 Output ONLY valid JSON matching this schema — no markdown, no explanation:
 {"blocks":[{"type":"sql|python|visualization|pivot_table|markdown|rich_text|dashboard_header|input|dropdown_input|date_input|power_toolbox","title":"...","description":"...","depends_on":[]},...]}"""

@@ -1,17 +1,25 @@
 from __future__ import annotations
 
 import json
-import re
+import logging
 from typing import AsyncIterator
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from src.providers.openrouter import make_streaming_llm
 from src.util.cache import publish_job_event
+from src.util.llm_json import LLMJSONError, parse_json_object
 from src.util.stream_events import StreamEnvelope
 
 from src.models.base import ChatContext
 from .models import IntentClass, ParseIntentRequest
 from .prompts import CLASSIFIER_PROMPT, SYSTEM_PROMPTS, _ANALYTICAL_PROMPT
+
+log = logging.getLogger("sandworm.intent")
+
+# Mirrors block_planner's retry pattern — an LLM empty/malformed response is
+# usually a one-off streaming hiccup, not a genuine incapability, so it's
+# worth one corrective retry before surfacing an error to the user.
+MAX_PARSE_ATTEMPTS = 2
 
 class ParseIntentService:
     def __init__(self, req: ParseIntentRequest, envelope: StreamEnvelope | None = None):
@@ -36,9 +44,9 @@ class ParseIntentService:
 
         return intent_class, len(parts) > 1 and parts[1].strip() == "yes"
 
-    async def _parse(self, intent_class: IntentClass) -> str:
+    def _build_messages(self, intent_class: IntentClass) -> list:
         prompt = SYSTEM_PROMPTS.get(intent_class, _ANALYTICAL_PROMPT)
-        messages = [SystemMessage(content=prompt)]
+        messages: list = [SystemMessage(content=prompt)]
 
         for turn in self.req.history:
             if turn.role == "user":
@@ -47,13 +55,49 @@ class ParseIntentService:
                 messages.append(AIMessage(content=turn.content))
 
         messages.append(HumanMessage(content=self.req.message))
+        return messages
 
+    async def _stream_completion(self, messages: list) -> str:
         full = ""
         async for chunk in self.llm.astream(messages):
             if chunk.content:
                 full += chunk.content
+        return full.strip()
 
-        return re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip())
+    async def _parse_json(self, intent_class: IntentClass) -> dict:
+        messages = self._build_messages(intent_class)
+        last_exc: LLMJSONError | None = None
+        raw = ""
+
+        for attempt in range(1, MAX_PARSE_ATTEMPTS + 1):
+            raw = await self._stream_completion(messages)
+            try:
+                return parse_json_object(raw)
+            except LLMJSONError as exc:
+                last_exc = exc
+                log.warning(
+                    "intent parse not valid JSON on attempt %d/%d (%s); raw=%r",
+                    attempt, MAX_PARSE_ATTEMPTS, exc, raw[:2000],
+                )
+                if attempt == MAX_PARSE_ATTEMPTS:
+                    break
+
+                # Same self-correction trick as block_planner: hand the model
+                # its own bad output back with a precise instruction rather
+                # than starting over from scratch.
+                messages = [
+                    *messages,
+                    AIMessage(content=raw),
+                    HumanMessage(
+                        content=(
+                            "That response was not valid JSON matching the schema. "
+                            "Return ONLY the JSON object — no markdown fences, no explanation."
+                        )
+                    ),
+                ]
+
+        assert last_exc is not None
+        raise last_exc
 
     def _is_followup_clarification(self) -> bool:
         for turn in reversed(self.req.history):
@@ -113,8 +157,7 @@ class ParseIntentService:
             })
 
             if intent_class != IntentClass.ANALYTICAL:
-                parsed = await self._parse(intent_class)
-                data   = json.loads(parsed)
+                data = await self._parse_json(intent_class)
 
                 payload = {
                     "intent_class":     intent_class.value,
@@ -127,7 +170,7 @@ class ParseIntentService:
                 yield json.dumps(payload)
                 return
 
-            data   = json.loads(await self._parse(intent_class))
+            data   = await self._parse_json(intent_class)
             status = data.get("status", "error")
 
             payload: dict = {

@@ -49,6 +49,7 @@ RULES:
 9. Keep titles concise (≤8 words). Descriptions should say what the block does, not how.
 10. depends_on lists the 0-based indices of blocks whose output this block needs.
 12. A sub_goal whose reason names a specific external API (DeFiLlama, CoinGecko, etc.) rather than a published report/attestation starts with a python block that fetches from that API directly — never a sql block for it, and never fabricate the data if no such fetch is planned.
+13. Every table gets its own block: plan one python block (or a pivot_table) per table, each ending with the DataFrame so it renders as a real table, never printed. Do not fold several tables into one block; plan one block for each, with a short markdown title above it when there are several.
 
 Output ONLY valid JSON matching this schema — no markdown, no explanation:
 {"blocks":[{"type":"sql|python|visualization|pivot_table|markdown|rich_text|dashboard_header|input|dropdown_input|date_input|power_toolbox","title":"...","description":"...","depends_on":[]},...]}"""

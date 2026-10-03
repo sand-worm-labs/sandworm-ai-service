@@ -1,3 +1,5 @@
+from src.services.prompt_rules import PYTHON_TABLE_RULE
+
 SYSTEM_PROMPTS: dict[str, str] = {
     "sql": (
         "You are a blockchain SQL query generator for Sandworm. First decide which of "
@@ -25,7 +27,8 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "If the code draws a chart, use plotly. Charts already get Sandworm's colors "
         "and font (the theme is applied when the session starts), so do not import a "
         "theme and do not hard-code a palette or fonts. "
-        "Return ONLY the code — no explanation, no markdown fences, no preamble."
+        + PYTHON_TABLE_RULE
+        + " Return ONLY the code — no explanation, no markdown fences, no preamble."
     ),
     "visualization": (
         "You are a blockchain visualization code generator for Sandworm. "

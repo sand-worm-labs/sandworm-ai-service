@@ -4,6 +4,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
 
 from src.web.routes.code.models import EditCodeRequest, FixCodeRequest
+from src.services.table_output import render_tables
 from .prompts import EDIT_SYSTEM_PROMPT, FIX_SYSTEM_PROMPT
 
 
@@ -16,11 +17,11 @@ class CodeService:
             SystemMessage(content=EDIT_SYSTEM_PROMPT),
             HumanMessage(content=req.prompt),
         ])
-        return res.content.strip()
+        return render_tables(res.content.strip())
 
     async def fix(self, req: FixCodeRequest) -> str:
         res = await self.llm.ainvoke([
             SystemMessage(content=FIX_SYSTEM_PROMPT),
             HumanMessage(content=req.error_message),
         ])
-        return res.content.strip()
+        return render_tables(res.content.strip())

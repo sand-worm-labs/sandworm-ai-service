@@ -14,6 +14,7 @@ from src.util.stream_events import StreamEnvelope
 from src.services.block_planner.models import BlockPlan, PlannedBlock
 from src.services.intent.models import Intent
 from .model import DUCKDB, DUNE, GeneratedBlock, SqlDataSource
+from src.services.table_output import render_tables
 from .prompts import SYSTEM_PROMPTS
 
 log = logging.getLogger("sandworm.block_action")
@@ -260,6 +261,8 @@ class BlockActionService:
                     HumanMessage(content=user),
                 ])
                 content = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", response.content.strip())
+                if block.type == "python":
+                    content = render_tables(content)
 
             if block.type == "sql":
                 generated_block.data_source = _sql_data_source(content, known_dataframe_names)

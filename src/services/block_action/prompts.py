@@ -22,9 +22,9 @@ SYSTEM_PROMPTS: dict[str, str] = {
     "python": (
         "You are a blockchain Python code generator for Sandworm. "
         "Write Python code using pandas as pd. "
-        "If the code draws a chart, use plotly and call "
-        "`from sandworm_theme import use_theme; use_theme()` once before drawing, "
-        "so it gets Sandworm's colors and font; do not hard-code a palette or fonts. "
+        "If the code draws a chart, use plotly. Charts already get Sandworm's colors "
+        "and font (the theme is applied when the session starts), so do not import a "
+        "theme and do not hard-code a palette or fonts. "
         "Return ONLY the code — no explanation, no markdown fences, no preamble."
     ),
     "visualization": (

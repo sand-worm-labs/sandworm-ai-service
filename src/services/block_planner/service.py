@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
 from src.services.intent.models import Intent
+from src.services.open_data.service import planner_context
 from src.services.sandworm_tools.service import SandwormToolsService
 from src.util.llm_json import LLMJSONError, parse_json_object
 
@@ -86,6 +87,30 @@ def _intent_summary(req: PlanBlocksRequest) -> str:
 
 MAX_PLAN_ATTEMPTS = 3
 
+# Block types that only make sense on top of another block's output.
+DEPENDENT_TYPES = {"visualization", "pivot_table"}
+
+
+# On open data only, the planner is told to plan python fetches only,
+# but an LLM can still slip in a Dune pull or a power tool. Drop those, and
+# anything left with nothing to read from, so no dead block reaches generation.
+def drop_offline_blocks(plan: BlockPlan) -> BlockPlan:
+    kept: list[PlannedBlock] = []
+    index_map: dict[int, int] = {}
+
+    for old_idx, block in enumerate(plan.blocks):
+        depends_on = [index_map[d] for d in block.depends_on if d in index_map]
+        needs_dune = block.type == "sql" and not depends_on
+        orphaned = block.type in DEPENDENT_TYPES and not depends_on
+        if block.type == "power_toolbox" or needs_dune or orphaned:
+            log.info("dropping %s block %r: open data only", block.type, block.title)
+            continue
+
+        index_map[old_idx] = len(kept)
+        kept.append(block.model_copy(update={"depends_on": depends_on}))
+
+    return BlockPlan(blocks=kept)
+
 
 def _parse_plan(raw_content: str) -> BlockPlan:
     # Pre-parse (strip fences/prose, confirm it's a JSON object) before
@@ -126,12 +151,18 @@ class PlanBlocksService:
         return BlockPlan(blocks=kept)
 
     async def plan(self) -> BlockPlan:
-        possible_tools = await _search_possible_tools(self.tools, self.req.intent, self.req.openrouter_api_key)
-        tools_context = _format_possible_tools(possible_tools)
-
+        intent = self.req.intent
         intent_summary = _intent_summary(self.req)
-        if tools_context:
-            intent_summary = f"{intent_summary}\n\n{tools_context}"
+
+        if self.req.open_data:
+            # No power tools on open data, so there is nothing to search.
+            queries = [sg.goal for sg in intent.sub_goals if sg.feasible] or [intent.goal]
+            intent_summary = f"{intent_summary}\n\n{planner_context(queries)}"
+        else:
+            possible_tools = await _search_possible_tools(self.tools, intent, self.req.openrouter_api_key)
+            tools_context = _format_possible_tools(possible_tools)
+            if tools_context:
+                intent_summary = f"{intent_summary}\n\n{tools_context}"
 
         messages = [
             SystemMessage(content=SYSTEM_PROMPT),
@@ -145,6 +176,8 @@ class PlanBlocksService:
             response = await self.llm.ainvoke(messages)
             try:
                 plan = _parse_plan(response.content)
+                if self.req.open_data:
+                    return drop_offline_blocks(plan)
                 return await self._drop_unmatched_power_toolbox_blocks(plan)
             except (LLMJSONError, ValidationError) as exc:
                 last_exc = exc

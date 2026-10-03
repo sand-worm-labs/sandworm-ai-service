@@ -9,6 +9,8 @@ class BaseContext(BaseModel):
     workspace_id: str
     document_id: str
     focused_block_ids: list[str] | None = None
+    # False when chain SQL (Dune) cannot run; notebooks are then built from public APIs.
+    sql_available: bool = True
 
 
 

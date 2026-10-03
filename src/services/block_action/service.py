@@ -6,6 +6,7 @@ import re
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.providers.openrouter import make_llm
+from src.services.open_data.service import OPEN_DATA_PYTHON_RULES, block_context
 from src.services.sandworm_tools.service import SandwormToolsService
 from src.util.cache import is_job_cancelled, wait_for_block_result
 from src.util.stream_events import StreamEnvelope
@@ -133,15 +134,16 @@ def _user_message(
                     col_desc = ", ".join(f"{c['name']} ({c['type']})" for c in columns)
                     parts.append(f"**Actual columns:** {col_desc}")
 
-        if dep.type == "sql" and dep.dataframe_name:
-            # The dependency already ran against Dune (or a prior local step) and
-            # its result is sitting in this same session as a DataFrame — point
-            # the model at it by name instead of letting it re-fetch from Dune.
+        if dep.type in EXECUTABLE_TYPES and dep.dataframe_name:
+            # The dependency already ran (a Dune pull, a local step, or a
+            # python fetch) and its result is sitting in this same session as
+            # a DataFrame — point the model at it by name instead of letting
+            # it re-fetch the data.
             parts.append(
                 f"The result of the preceding block above is already loaded in this "
                 f"session as a table/DataFrame named `{dep.dataframe_name}`. Query it "
                 f"directly (e.g. `SELECT ... FROM {dep.dataframe_name} ...`) — do not "
-                f"re-fetch this data from Dune."
+                f"re-fetch this data."
             )
 
     return "\n\n".join(parts)
@@ -181,6 +183,7 @@ class BlockActionService:
         intent: Intent,
         notebook_markdown: str | None = None,
         chat_id: str | None = None,
+        open_data: bool = False,
     ) -> list[GeneratedBlock]:
         generated: list[GeneratedBlock] = []
         # Real execution outcomes for already-generated blocks, keyed by their
@@ -215,15 +218,14 @@ class BlockActionService:
                 depends_on=block.depends_on,
             )
 
-            if block.type == "sql":
+            if block.type in EXECUTABLE_TYPES:
                 generated_block.dataframe_name = _dataframe_name(job_id, index)
             elif block.type in ("pivot_table", "visualization") and block.depends_on:
                 # Node needs a real dataframeName to wire these up to actual
-                # data (see addBlocks on the Node side) — only resolvable here
-                # when the dependency is sql, whose dataframe_name is assigned
-                # deterministically above before the query even runs. A python
-                # dependency's output variable name isn't known at this point,
-                # so this stays unresolved (same as before) for that case.
+                # data (see addBlocks on the Node side). A sql or python
+                # dependency's dataframe_name is assigned deterministically
+                # above, before it even runs; a python block is told to store
+                # its result under that name (see below).
                 dep_idx = block.depends_on[0]
                 if dep_idx < len(generated) and generated[dep_idx].dataframe_name:
                     generated_block.dataframe_name = generated[dep_idx].dataframe_name
@@ -240,6 +242,18 @@ class BlockActionService:
             else:
                 system = SYSTEM_PROMPTS[block.type]
                 user = _user_message(block, intent, generated, block_results, existing_dataframes)
+                if block.type == "python":
+                    # Visualization, pivot_table and follow-up sql blocks read
+                    # a python block's output by this name.
+                    user = (
+                        f"{user}\n\n**Output:** store this block's final table in a pandas "
+                        f"DataFrame assigned to a top-level variable named "
+                        f"`{generated_block.dataframe_name}`. Later blocks chart, pivot and "
+                        f"query it by that name."
+                    )
+                    if open_data:
+                        system += OPEN_DATA_PYTHON_RULES
+                        user = f"{user}\n\n{block_context(f'{block.title} {block.description}')}"
 
                 response = await self.llm.ainvoke([
                     SystemMessage(content=system),
@@ -254,8 +268,11 @@ class BlockActionService:
                     block.title, generated_block.data_source,
                     sorted(known_dataframe_names), content[:500],
                 )
-                if generated_block.dataframe_name:
-                    known_dataframe_names.add(generated_block.dataframe_name)
+
+            # A later sql block that names this dataframe is a local DuckDB
+            # query over it, not a Dune pull.
+            if block.type in EXECUTABLE_TYPES and generated_block.dataframe_name:
+                known_dataframe_names.add(generated_block.dataframe_name)
 
             generated_block.content = content
             generated.append(generated_block)

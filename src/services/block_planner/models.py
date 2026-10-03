@@ -38,3 +38,5 @@ class PlanBlocksRequest(BaseAiRequest):
     intent: Intent
     context: DocumentContext | ChatContext
     history: list[Message] = Field(default_factory=list)
+    # Plan from public APIs only (see services/open_data).
+    open_data: bool = False

@@ -20,6 +20,7 @@ from src.services.intent.models import ParseIntentRequest, Intent, IntentClass, 
 from src.services.block_planner.service import PlanBlocksService
 from src.services.block_planner.models import PlanBlocksRequest, BlockPlan
 from src.services.block_action.service import BlockActionService
+from src.services.open_data.service import use_open_data
 from src.services.block_action.model import GeneratedBlock
 
 log = logging.getLogger("sandworm.pipeline")
@@ -44,6 +45,11 @@ class PipelineState:
     generated_blocks: list[GeneratedBlock] | None = None
     notebook_markdown: str | None = None
     output: str | None = None
+
+    @property
+    def open_data(self) -> bool:
+        prompts = [m.content for m in self.messages if m.role == "user"]
+        return use_open_data(prompts, self.context.sql_available)
 
     @property
     def has_focused_blocks(self) -> bool:
@@ -118,6 +124,7 @@ async def node_plan_blocks(state: PipelineState) -> PipelineState:
         openrouter_api_key=state.api_key,
         intent=intent,
         context=state.context,
+        open_data=state.open_data,
     )
 
     state.block_plan = await PlanBlocksService(req).plan()
@@ -129,7 +136,7 @@ async def node_generate_blocks(state: PipelineState, envelope: StreamEnvelope) -
     chat_id = state.context.chat_id if isinstance(state.context, ChatContext) else None
     service = BlockActionService(api_key=state.api_key, model=state.model, envelope=envelope)
     state.generated_blocks = await service.generate_blocks(
-        state.block_plan, intent, state.notebook_markdown, chat_id=chat_id,
+        state.block_plan, intent, state.notebook_markdown, chat_id=chat_id, open_data=state.open_data,
     )
     return state
 

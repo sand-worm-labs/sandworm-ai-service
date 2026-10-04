@@ -47,14 +47,17 @@ def open_data_from_prompt(prompt: str) -> bool | None:
     return None if asks_open == asks_sandworm else asks_open
 
 
-# The latest prompt that says which data to use decides. With none, it is
-# Sandworm's data unless chain SQL cannot run.
+# Without chain SQL (a free workspace, or no source connected) it is always
+# open data. Otherwise the latest prompt that says which data to use decides,
+# and with none it is Sandworm's data.
 def use_open_data(prompts: list[str], sql_available: bool) -> bool:
+    if not sql_available:
+        return True
     for prompt in reversed(prompts):
         asked = open_data_from_prompt(prompt)
         if asked is not None:
             return asked
-    return not sql_available
+    return False
 
 
 def _singular(word: str) -> str:

@@ -54,7 +54,11 @@ def test_the_prompt_says_which_data_to_use():
 def test_the_latest_prompt_that_names_a_mode_decides():
     assert use_open_data(["use open data", "now add a chart"], sql_available=True) is True
     assert use_open_data(["use open data", "switch to our data"], sql_available=True) is False
-    assert use_open_data(["use our data"], sql_available=False) is False
+
+
+def test_without_chain_sql_it_is_always_open_data():
+    assert use_open_data(["use our data"], sql_available=False) is True
+    assert use_open_data(["using dune, show top pools"], sql_available=False) is True
 
 
 def test_with_nothing_said_it_is_open_data_only_when_sql_cannot_run():

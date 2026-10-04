@@ -11,6 +11,7 @@ from src.util.llm_json import LLMJSONError, parse_json_object
 from src.util.stream_events import StreamEnvelope
 
 from src.models.base import ChatContext
+from src.services.open_data.service import FREE_PLAN_INTENT_NOTE
 from .models import IntentClass, ParseIntentRequest
 from .prompts import CLASSIFIER_PROMPT, SYSTEM_PROMPTS, _ANALYTICAL_PROMPT
 
@@ -47,6 +48,8 @@ class ParseIntentService:
     def _build_messages(self, intent_class: IntentClass) -> list:
         prompt = SYSTEM_PROMPTS.get(intent_class, _ANALYTICAL_PROMPT)
         messages: list = [SystemMessage(content=prompt)]
+        if self.req.context.paid_plan_required:
+            messages.append(SystemMessage(content=FREE_PLAN_INTENT_NOTE))
 
         for turn in self.req.history:
             if turn.role == "user":

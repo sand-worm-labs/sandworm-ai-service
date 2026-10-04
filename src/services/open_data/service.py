@@ -149,3 +149,26 @@ def block_context(task: str) -> str:
         "**Public APIs to fetch from** (a path starting with / is relative to the "
         f"source's base URL; pick the endpoints this task needs):\n{sources}"
     )
+
+
+# On the free plan only public APIs can be used. These notes make the intent
+# step mark chain-only parts as not feasible, and the reply tell the user why.
+PAID_PLAN_REASON = "needs Sandworm chain data (paid plan)"
+
+FREE_PLAN_INTENT_NOTE = (
+    "This workspace is on the free plan: Sandworm's chain data (Dune and Sandworm Cloud SQL) "
+    "is not available, only free public APIs. A sub_goal that needs chain data no free public "
+    "API exposes, such as decoded contract events, every transaction or transfer of a contract, "
+    "wallet-level histories or holder lists, is feasible=false with reason "
+    f'"{PAID_PLAN_REASON}". Never stand in a different public metric for it.'
+)
+
+
+def free_plan_reply_note(left_out: list[str]) -> str:
+    parts = "; ".join(left_out)
+    return (
+        "This workspace is on the free plan. These parts were left out because they need "
+        f"Sandworm's chain data, which comes with a paid plan: {parts}. Say this plainly in "
+        "your reply and tell the user they can upgrade in Settings > Plan to get them. Do not "
+        "offer a workaround that pretends to answer them."
+    )

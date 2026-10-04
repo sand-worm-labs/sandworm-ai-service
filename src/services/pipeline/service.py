@@ -20,7 +20,7 @@ from src.services.intent.models import ParseIntentRequest, Intent, IntentClass, 
 from src.services.block_planner.service import PlanBlocksService
 from src.services.block_planner.models import PlanBlocksRequest, BlockPlan
 from src.services.block_action.service import BlockActionService
-from src.services.open_data.service import use_open_data
+from src.services.open_data.service import free_plan_reply_note, use_open_data
 from src.services.block_action.model import GeneratedBlock
 
 log = logging.getLogger("sandworm.pipeline")
@@ -210,8 +210,22 @@ def _summarize_generated_blocks(blocks: list[GeneratedBlock]) -> str:
     return "\n".join(lines)
 
 
+def _left_out_for_plan(state: PipelineState) -> list[str]:
+    if not state.context.paid_plan_required or not state.parsed_intent or not state.parsed_intent.intent:
+        return []
+    try:
+        intent = Intent.model_validate(state.parsed_intent.intent)
+    except ValueError:
+        return []
+    return [sg.goal for sg in intent.sub_goals if not sg.feasible]
+
+
 async def node_complete(state: PipelineState, envelope: StreamEnvelope, chat_id: str | None) -> PipelineState:
     messages = state.messages
+
+    left_out = _left_out_for_plan(state)
+    if left_out:
+        messages = [Message(role="system", content=free_plan_reply_note(left_out)), *messages]
 
     if state.notebook_markdown:
         messages = [

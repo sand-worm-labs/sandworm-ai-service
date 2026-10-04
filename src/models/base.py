@@ -12,6 +12,8 @@ class BaseContext(BaseModel):
     # False when neither Dune nor Sandworm Cloud can run SQL; notebooks are then
     # built from public APIs.
     sql_available: bool = True
+    # True when chain SQL is off because the workspace is on the free plan.
+    paid_plan_required: bool = False
 
 
 

@@ -4,6 +4,7 @@ from src.services.open_data.service import (
     match_open_data,
     open_data_from_prompt,
     planner_context,
+    free_plan_reply_note,
     use_open_data,
 )
 
@@ -64,3 +65,9 @@ def test_without_chain_sql_it_is_always_open_data():
 def test_with_nothing_said_it_is_open_data_only_when_sql_cannot_run():
     assert use_open_data(["stablecoin supply by chain"], sql_available=False) is True
     assert use_open_data(["stablecoin supply by chain"], sql_available=True) is False
+
+
+def test_free_plan_reply_names_what_was_left_out_and_how_to_upgrade():
+    note = free_plan_reply_note(["holders of the token", "every swap on the pool"])
+    assert "holders of the token; every swap on the pool" in note
+    assert "Settings > Plan" in note

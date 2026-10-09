@@ -1,20 +1,13 @@
 from __future__ import annotations
 
-from langchain_core.messages import SystemMessage, HumanMessage
-from src.providers.openrouter import make_llm
-
+from src.services.agent.model import ask
 from src.services.completions.models import CompletionRequest
+
 from .prompts import SYSTEM_PROMPT
 
 
 class ChatTitleService:
     def __init__(self, req: CompletionRequest) -> None:
-        self.llm = make_llm(
-            api_key=req.openrouter_api_key,
-            model=req.model,
-            temperature=req.temperature,
-            max_tokens=req.max_tokens,
-        )
         self.req = req
 
     async def generate(self) -> str:
@@ -22,13 +15,12 @@ class ChatTitleService:
         if not first_user:
             return "New Chat"
 
-        messages = [
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=first_user.content),
-        ]
-
-        if self.req.derived_context:
-            messages = [SystemMessage(content=self.req.derived_context), *messages]
-
-        res = await self.llm.ainvoke(messages)
-        return res.content.strip()
+        system = f"{self.req.derived_context}\n\n{SYSTEM_PROMPT}" if self.req.derived_context else SYSTEM_PROMPT
+        return await ask(
+            self.req.openrouter_api_key,
+            self.req.model,
+            system,
+            first_user.content,
+            self.req.temperature,
+            self.req.max_tokens,
+        )

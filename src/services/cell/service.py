@@ -7,8 +7,10 @@ from src.config.settings import settings
 from src.models.base import DocumentContext
 from src.services.agent.cell_edit import CellEditFailed, CellRef, update_cell_with_mcp
 from src.services.agent.mcp_client import McpClient
+from src.services.prompt_rules import PYTHON_TABLE_RULE
 from src.services.research_memory.models import Attempt
 from src.services.research_memory.service import recall_text, remember_in_background
+from src.services.table_output import render_tables
 
 CellKind = Literal["python", "sql", "markdown"]
 
@@ -34,8 +36,11 @@ MEMORY_NOTE = (
 
 
 def _apply(kind: CellKind, task: str) -> str:
+    # Python cells render a DataFrame as a table, so tables must not be printed.
+    rules = f"{PYTHON_TABLE_RULE}\n" if kind == "python" else ""
     return (
         f"{task}\n"
+        f"{rules}"
         f"Apply the result by calling update_cell with `content` set to the COMPLETE new {_NOUN[kind]}: "
         f"the raw {_RAW[kind]} only, never wrapped in {_FENCE[kind]} or any other code fences. {_TAIL[kind]}"
     )
@@ -74,7 +79,15 @@ class CellService:
         mcp = McpClient(settings.MCP_URL, self.context.user_token)
         try:
             written = await update_cell_with_mcp(
-                mcp, self.api_key, self.model, system + (MEMORY_NOTE + memory if memory else ""), user, cell
+                mcp,
+                self.api_key,
+                self.model,
+                system + (MEMORY_NOTE + memory if memory else ""),
+                user,
+                cell,
+                # Rewrites a printed table into one the notebook can render, so the rule
+                # does not depend on the model following it.
+                transform=render_tables if self.kind == "python" else None,
             )
             self._remember(action, user, True, f"wrote: {written}")
         except CellEditFailed as exc:

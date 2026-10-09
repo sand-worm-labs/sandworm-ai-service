@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -26,13 +27,20 @@ class CellRef:
 
 
 async def update_cell_with_mcp(
-    mcp: McpClient, api_key: str, model: str, system: str, user: str, cell: CellRef
+    mcp: McpClient,
+    api_key: str,
+    model: str,
+    system: str,
+    user: str,
+    cell: CellRef,
+    transform: Callable[[str], str] | None = None,
 ) -> str:
     """Have the model write a cell's new text, and apply it through the MCP server's update_cell.
 
     The model decides only the content: the ids always come from the request,
-    never from the model. Returns the text that was written. A call the schema
-    or the server rejects goes back to the model once to correct.
+    never from the model. `transform` fixes up the text before it is written.
+    Returns the text that was written. A call the schema or the server rejects
+    goes back to the model once to correct.
     """
     server_tools = [t for t in await mcp.list_tools() if t["name"] == UPDATE_CELL]
     if not server_tools:
@@ -58,6 +66,8 @@ async def update_cell_with_mcp(
                 content = json.loads(call["function"].get("arguments") or "{}").get("content")
             except json.JSONDecodeError:
                 content = None
+            if transform and isinstance(content, str):
+                content = transform(content)
             arguments = {
                 "notebookId": cell.document_id,
                 "workspaceId": cell.workspace_id,

@@ -111,3 +111,14 @@ async def test_no_update_cell_tool_means_a_clear_failure(mocker):
     with pytest.raises(CellEditFailed, match="no update_cell"):
         await cell_edit.update_cell_with_mcp(make_mcp(tools=[]), "k", "m", "sys", "u", CELL)
     model.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_the_transform_runs_on_the_content_before_it_is_written(mocker):
+    mcp = make_mcp()
+    model_replies(mocker, tool_call('{"content": "print(df)"}'))
+
+    written = await cell_edit.update_cell_with_mcp(mcp, "k", "m", "sys", "u", CELL, transform=lambda text: text.upper())
+
+    assert written == "PRINT(DF)"
+    assert mcp.call_tool.await_args.args[1]["content"] == "PRINT(DF)"

@@ -13,6 +13,11 @@ class BaseContext(BaseModel):
     # The user's Sandworm access token. Everything this service does to a
     # notebook goes through the MCP server with it, so tools act as this user.
     user_token: str | None = None
+    # False when neither Dune nor Sandworm Cloud can run SQL; notebooks are then
+    # built from public APIs.
+    sql_available: bool = True
+    # True when chain SQL is off because the workspace is on the free plan.
+    paid_plan_required: bool = False
 
 
 class ChatContext(BaseContext):

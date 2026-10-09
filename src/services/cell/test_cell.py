@@ -92,3 +92,28 @@ async def test_editing_needs_the_users_token(mcp, write, memory):
 async def test_markdown_cells_have_nothing_to_fix(mcp, write, memory):
     with pytest.raises(ValueError, match="nothing to fix"):
         await cell.CellService("k", "m", "markdown", CONTEXT, "c1").fix("boom")
+
+
+def test_only_python_cells_get_the_table_rule():
+    from src.services.prompt_rules import PYTHON_TABLE_RULE
+
+    for action in (cell.edit_prompt("python"), cell.fix_prompt("python")):
+        assert PYTHON_TABLE_RULE in action
+    for other in (cell.edit_prompt("sql"), cell.fix_prompt("sql"), cell.edit_prompt("markdown")):
+        assert PYTHON_TABLE_RULE not in other
+
+
+@pytest.mark.asyncio
+async def test_python_edits_have_printed_tables_rewritten_before_they_are_written(mcp, write, memory):
+    await cell.CellService("k", "m", "python", CONTEXT, "c1").edit("show it")
+
+    transform = write.await_args.kwargs["transform"]
+    assert transform("print(df)\n") != "print(df)\n"  # a printed table becomes display(df)
+    assert transform("print('done')\n") == "print('done')\n"  # printed text is left alone
+
+
+@pytest.mark.asyncio
+async def test_sql_and_markdown_edits_are_written_as_the_model_wrote_them(mcp, write, memory):
+    for kind in ("sql", "markdown"):
+        await cell.CellService("k", "m", kind, CONTEXT, "c1").edit("x")
+        assert write.await_args.kwargs["transform"] is None

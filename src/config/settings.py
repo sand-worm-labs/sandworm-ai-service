@@ -24,10 +24,12 @@ class Settings(BaseSettings):
     # to the model; EXCLUDE removes names. By default the agent gets the full
     # tool set, like external clients, minus tools that browse away from its
     # notebook or are not its job (publishing, deleting or scheduling notebooks).
+    # It also never makes a notebook or workspace: chat always opens inside a
+    # notebook that already exists, and that is the one it works in.
     AGENT_INCLUDE_TOOLS: str = ""
     AGENT_EXCLUDE_TOOLS: str = (
         "list_workspaces,list_projects,save_reply,delete_notebook,publish_notebook,unpublish_notebook,"
-        "schedule_notebook,unschedule_notebook"
+        "schedule_notebook,unschedule_notebook,create_notebook,fork_notebook,search_notebooks,create_workspace"
     )
     # Label each message first (chat, read, edit, run, ...) and offer only that kind's tools.
     # Off by default: a wrong label hides a tool the message needed.

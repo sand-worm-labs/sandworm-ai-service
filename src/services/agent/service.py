@@ -65,13 +65,37 @@ def system_prompt(context: ChatContext, mcp_instructions: str, prior_research: s
         part
         for part in [
             "You are Sandworm's onchain analytics assistant, working for the user through Sandworm's tools.",
-            f"You are in notebook {context.document_id} of workspace {context.workspace_id}; pass these ids to tools that take them. Work in this notebook: do not look up other workspaces or notebooks unless the user asks.{focused}",
+            f"You are in notebook {context.document_id} of workspace {context.workspace_id}. Every tool already works on this notebook, so you never pass a notebook or workspace id. This notebook already exists and is open in front of the user: do all the work in it, by adding and editing its cells. Never create, copy or switch to another notebook or workspace, even for a new analysis.{focused}",
             "Use the tools to do the work instead of describing it, and never invent figures: report what the tools returned.",
             mcp_instructions,
             prior_research,
         ]
         if part
     )
+
+
+def notebook_ids(context: ChatContext) -> dict[str, str]:
+    """The notebook the chat is open in, under the names the MCP tools use for it."""
+    return {"notebookId": context.document_id, "workspaceId": context.workspace_id}
+
+
+def pinned_arguments(schema: dict[str, Any], context: ChatContext) -> dict[str, str]:
+    """The ids this tool takes, set to the current notebook. They always come from the request, never from the model."""
+    return {k: v for k, v in notebook_ids(context).items() if k in schema.get("properties", {})}
+
+
+def without_pinned(spec: dict[str, Any], context: ChatContext) -> dict[str, Any]:
+    """The tool as the model sees it: the notebook ids are gone, since it cannot choose them."""
+    schema = spec["function"]["parameters"]
+    pinned = pinned_arguments(schema, context)
+    if not pinned:
+        return spec
+    shown = {
+        **schema,
+        "properties": {k: v for k, v in schema["properties"].items() if k not in pinned},
+        "required": [k for k in schema.get("required", []) if k not in pinned],
+    }
+    return {**spec, "function": {**spec["function"], "parameters": shown}}
 
 
 class JobCancelled(Exception):
@@ -135,6 +159,9 @@ async def _run_tool_call(
     arguments: dict[str, Any] = {}
     try:
         arguments = json.loads(call["function"].get("arguments") or "{}")
+        if name in schemas:
+            # Every tool works on the notebook the chat is open in, whatever the model sent.
+            arguments = {**arguments, **pinned_arguments(schemas[name], state.context)}
         # Checked here so a malformed call never reaches the server; the
         # model gets the problem back and can retry.
         problem = invalid_arguments(schemas[name], arguments) if name in schemas else f"Unknown tool {name}."
@@ -176,7 +203,7 @@ def _build_tools(
             make(spec["function"]["name"]),
             name=spec["function"]["name"],
             description=spec["function"].get("description", ""),
-            json_schema=spec["function"]["parameters"],
+            json_schema=without_pinned(spec, state.context)["function"]["parameters"],
             sequential=True,  # notebook edits (add/update/delete cell) are order-dependent
         )
         for spec in specs

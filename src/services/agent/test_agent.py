@@ -351,14 +351,14 @@ async def test_added_cell_shows_up_as_a_created_block_card(mocker, envelope):
 async def test_a_bad_tool_call_is_fed_back_and_never_reaches_the_server(mocker, envelope):
     mcp = make_mcp()
     mcp.list_tools.return_value = [
-        {"name": "publish_notebook", "inputSchema": {"type": "object", "properties": {"notebookId": {"type": "string"}}, "required": ["notebookId"]}}
+        {"name": "delete_cell", "inputSchema": {"type": "object", "properties": {"cellId": {"type": "string"}}, "required": ["cellId"]}}
     ]
     returned = []
 
     async def respond(messages, info):
         returned.extend(p.content for m in messages for p in m.parts if p.part_kind == "tool-return")
         if not returned:
-            return ModelResponse(parts=[ToolCallPart("publish_notebook", {})])
+            return ModelResponse(parts=[ToolCallPart("delete_cell", {})])
         return ModelResponse(parts=[TextPart("Sorry.")])
 
     mocker.patch.object(agent, "_make_model", return_value=FunctionModel(respond))
@@ -366,7 +366,40 @@ async def test_a_bad_tool_call_is_fed_back_and_never_reaches_the_server(mocker, 
     await run(mcp, envelope)
 
     mcp.call_tool.assert_not_awaited()
-    assert "notebookId" in returned[0]
+    assert "cellId" in returned[0]
+
+
+@pytest.mark.asyncio
+async def test_every_tool_call_goes_to_the_notebook_the_chat_is_open_in(mocker, envelope):
+    mcp = make_mcp()
+    ids = {"notebookId": {"type": "string"}, "workspaceId": {"type": "string"}}
+    mcp.list_tools.return_value = [
+        {
+            "name": "add_cell",
+            "inputSchema": {
+                "type": "object",
+                "properties": {**ids, "content": {"type": "string"}},
+                "required": ["notebookId", "workspaceId", "content"],
+            },
+        }
+    ]
+    offered = []
+
+    async def respond(messages, info):
+        offered.extend(t.parameters_json_schema for t in info.function_tools)
+        if any(p.part_kind == "tool-return" for m in messages for p in m.parts):
+            return ModelResponse(parts=[TextPart("Done.")])
+        # the model leaves the ids out, or makes one up: either way the current notebook is used
+        return ModelResponse(parts=[ToolCallPart("add_cell", {"content": "select 1", "notebookId": "some-other"})])
+
+    mocker.patch.object(agent, "_make_model", return_value=FunctionModel(respond))
+
+    await run(mcp, envelope)
+
+    mcp.call_tool.assert_awaited_once_with("add_cell", {"content": "select 1", "notebookId": "d", "workspaceId": "w"})
+    # and the model is never asked for them
+    assert set(offered[0]["properties"]) == {"content"}
+    assert offered[0]["required"] == ["content"]
 
 
 @pytest.mark.asyncio
@@ -406,4 +439,6 @@ def test_the_default_agent_gets_the_full_tool_set_minus_browsing_and_destructive
     assert Settings.model_fields["AGENT_INCLUDE_TOOLS"].default == ""
     excluded = {n.strip() for n in Settings.model_fields["AGENT_EXCLUDE_TOOLS"].default.split(",")}
     assert {"list_workspaces", "list_projects", "delete_notebook", "publish_notebook", "save_reply"} <= excluded
+    # chat works in the notebook it was opened in, and never makes another
+    assert {"create_notebook", "fork_notebook", "create_workspace"} <= excluded
     assert excluded.isdisjoint({"get_notebook", "add_cell", "update_cell", "run_notebook", "plan_notebook"})

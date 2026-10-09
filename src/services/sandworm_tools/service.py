@@ -5,11 +5,10 @@ from typing import Any
 
 log = logging.getLogger("sandworm.tools")
 
-import httpx
 from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
 
-from src.config.settings import settings
 from src.services.sandworm_tools.models import SandwormTool
+from src.util.embeddings import embed_texts
 from src.util.qdrant import get_qdrant
 
 COLLECTION = "sandworm_tools"
@@ -41,15 +40,7 @@ class SandwormToolsService:
     # OpenRouter key for a live search (see search() below) — their usage,
     # their key.
     async def _embed_batch(self, texts: list[str], api_key: str | None = None) -> list[list[float]]:
-        async with httpx.AsyncClient() as client:
-            res = await client.post(
-                "https://openrouter.ai/api/v1/embeddings",
-                headers={"Authorization": f"Bearer {api_key or settings.OPENROUTER_EMBEDDING_KEY}"},
-                json={"model": "openai/text-embedding-3-large", "input": texts},
-                timeout=60,
-            )
-            res.raise_for_status()
-            return [item["embedding"] for item in res.json()["data"]]
+        return await embed_texts(texts, api_key)
 
     async def embed(self, text: str, api_key: str | None = None) -> list[float]:
         return (await self._embed_batch([text], api_key))[0]

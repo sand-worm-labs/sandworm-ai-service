@@ -9,9 +9,12 @@ from qdrant_client.models import Distance, VectorParams
 logger = logging.getLogger("sandworm")
 
 VECTOR_SIZE = 3072
+LOCAL_VECTOR_SIZE = 384  # BAAI/bge-small-en-v1.5, see util/embeddings.py
 
 COLLECTIONS: dict[str, VectorParams] = {
     "sandworm_tools": VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+    # Every notebook's content and every attempt the AI made, so past work informs new work.
+    "notebook_memory": VectorParams(size=LOCAL_VECTOR_SIZE, distance=Distance.COSINE),
 }
 
 _client: AsyncQdrantClient | None = None

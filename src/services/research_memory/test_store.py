@@ -1,0 +1,127 @@
+from __future__ import annotations
+
+import hashlib
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from src.services.research_memory import store
+from src.services.research_memory.models import Attempt
+
+
+@pytest.fixture
+def qdrant(mocker):
+    client = MagicMock()
+    client.scroll = AsyncMock(return_value=([], None))
+    client.delete = AsyncMock()
+    client.upsert = AsyncMock()
+    client.query_points = AsyncMock(return_value=SimpleNamespace(points=[]))
+    mocker.patch.object(store, "get_qdrant", return_value=client)
+    return client
+
+
+@pytest.fixture
+def embed(mocker):
+    return mocker.patch.object(
+        store, "embed_local", new=AsyncMock(side_effect=lambda texts, query=False: [[0.1] * 3 for _ in texts])
+    )
+
+
+@pytest.mark.asyncio
+async def test_indexing_replaces_the_notebook_and_tags_every_chunk_with_its_workspace(qdrant, embed):
+    changed = await store.index_notebook("w1", "d1", "TVL study", "Uniswap TVL fell 12%.")
+
+    assert changed is True
+    qdrant.delete.assert_awaited_once()
+    points = qdrant.upsert.await_args.kwargs["points"]
+    assert [p.payload["workspace_id"] for p in points] == ["w1"]
+    assert points[0].payload["kind"] == "notebook"
+    assert points[0].payload["document_id"] == "d1"
+    assert "Uniswap TVL fell 12%." in points[0].payload["text"]
+
+
+@pytest.mark.asyncio
+async def test_an_unchanged_notebook_is_not_embedded_again(qdrant, embed):
+    markdown = "same content"
+    qdrant.scroll.return_value = (
+        [SimpleNamespace(payload={"content_hash": hashlib.sha256(markdown.encode()).hexdigest()})],
+        None,
+    )
+
+    assert await store.index_notebook("w1", "d1", "t", markdown) is False
+    embed.assert_not_awaited()
+    qdrant.upsert.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_an_empty_notebook_is_skipped(qdrant, embed):
+    assert await store.index_notebook("w1", "d1", "t", "   \n") is False
+    embed.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_attempts_are_stored_with_their_outcome_failures_included(qdrant, embed):
+    attempts = [
+        Attempt("add_cell", "type=sql dataSource=dune", True, "ok"),
+        Attempt("run_notebook", "", False, "column 'tvl' does not exist"),
+    ]
+
+    stored = await store.index_attempts("w1", "d1", "TVL study", "run-1", attempts)
+
+    assert stored == 2
+    points = qdrant.upsert.await_args.kwargs["points"]
+    assert [(p.payload["kind"], p.payload["worked"]) for p in points] == [("attempt", True), ("attempt", False)]
+    assert points[1].payload["text"].startswith("FAILED: run_notebook")
+    assert "column 'tvl' does not exist" in points[1].payload["text"]
+    assert len({p.id for p in points}) == 2
+
+
+@pytest.mark.asyncio
+async def test_no_attempts_means_nothing_is_embedded(qdrant, embed):
+    assert await store.index_attempts("w1", "d1", "t", "run", []) == 0
+    embed.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_recall_is_scoped_to_the_workspace_and_asks_with_a_query_embedding(qdrant, embed):
+    await store.recall("w1", "uniswap tvl", exclude_document_id="d-now")
+
+    flt = qdrant.query_points.await_args.kwargs["query_filter"]
+    assert [(c.key, c.match.value) for c in flt.must] == [("workspace_id", "w1")]
+    assert embed.await_args.kwargs == {"query": True}
+
+
+def hit(doc, score, text, kind="notebook", worked=None):
+    payload = {"kind": kind, "document_id": doc, "title": f"T-{doc}", "text": text}
+    if worked is not None:
+        payload["worked"] = worked
+    return SimpleNamespace(score=score, payload=payload)
+
+
+@pytest.mark.asyncio
+async def test_recall_keeps_the_best_chunk_per_notebook_and_skips_the_current_one(qdrant, embed):
+    qdrant.query_points.return_value = SimpleNamespace(
+        points=[
+            hit("a", 0.9, "best of a"),
+            hit("a", 0.8, "second of a"),
+            hit("now", 0.85, "the notebook being edited"),
+            hit("b", 0.1, "too weak"),
+            hit("c", 0.5, "c"),
+        ]
+    )
+
+    hits = await store.recall("w1", "q", exclude_document_id="now")
+
+    assert [(h.document_id, h.text) for h in hits] == [("a", "best of a"), ("c", "c")]
+
+
+@pytest.mark.asyncio
+async def test_recall_keeps_attempts_even_from_the_current_notebook(qdrant, embed):
+    qdrant.query_points.return_value = SimpleNamespace(
+        points=[hit("now", 0.7, "FAILED: add_cell dune", kind="attempt", worked=False)]
+    )
+
+    hits = await store.recall("w1", "q", exclude_document_id="now")
+
+    assert [(h.kind, h.worked) for h in hits] == [("attempt", False)]

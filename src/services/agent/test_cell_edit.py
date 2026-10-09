@@ -53,7 +53,7 @@ async def test_the_edit_is_applied_through_update_cell_with_the_ids_from_the_req
 
     assert written == "select 2"
     mcp.call_tool.assert_awaited_once_with(
-        "update_cell", {"notebookId": "d1", "workspaceId": "w1", "cellId": "c1", "content": "select 2"}
+        "update_cell", {"notebookId": "d1", "workspaceId": "w1", "cellId": "c1", "content": "select 2"}, log=True
     )
     # the model is made to call update_cell, and is offered nothing else
     assert call.await_args.kwargs["tool_choice"] == {"type": "function", "function": {"name": "update_cell"}}
@@ -122,3 +122,23 @@ async def test_the_transform_runs_on_the_content_before_it_is_written(mocker):
 
     assert written == "PRINT(DF)"
     assert mcp.call_tool.await_args.args[1]["content"] == "PRINT(DF)"
+
+
+@pytest.mark.asyncio
+async def test_rename_notebook_applies_the_title_with_edit_notebook(mocker):
+    schema = {
+        "type": "object",
+        "properties": {k: {"type": "string"} for k in ("notebookId", "workspaceId", "title")},
+        "required": ["notebookId", "workspaceId", "title"],
+    }
+    mcp = make_mcp(tools=[{"name": "edit_notebook", "description": "d", "inputSchema": schema}])
+    reply = {"content": None, "tool_calls": [{"id": "t1", "function": {"name": "edit_notebook", "arguments": '{"title": "Uniswap TVL", "notebookId": "evil"}'}}]}
+    model_replies(mocker, reply)
+
+    written = await cell_edit.rename_notebook_with_mcp(mcp, "k", "m", "sys", "user", "w1", "d1")
+
+    assert written == "Uniswap TVL"
+    # the ids come from the request, never from the model
+    mcp.call_tool.assert_awaited_once_with(
+        "edit_notebook", {"notebookId": "d1", "workspaceId": "w1", "title": "Uniswap TVL"}, log=True
+    )

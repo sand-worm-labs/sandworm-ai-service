@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 import src.__main__ as app_module
@@ -68,3 +70,22 @@ def test_requests_without_a_valid_handshake_token_are_refused(client, service):
     wrong = client.post("/sql/edit", json={**BODY, "prompt": "x"}, headers={"x-handshake-token": "nope"})
     assert wrong.status_code == 401
     service.edit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_an_edit_is_cancelled_when_the_api_closes_the_request(mocker):
+    mocker.patch.object(cell_router, "DISCONNECT_POLL_SECONDS", 0)
+    request = AsyncMock()
+    request.is_disconnected.side_effect = [False, True]
+    reached_the_cell_write = False
+
+    async def edit():
+        nonlocal reached_the_cell_write
+        await asyncio.sleep(60)  # the model is still writing
+        reached_the_cell_write = True
+
+    with pytest.raises(HTTPException) as stopped:
+        await cell_router._unless_stopped(request, edit())
+
+    assert stopped.value.status_code == 499
+    assert not reached_the_cell_write

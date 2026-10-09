@@ -15,6 +15,7 @@ CONTEXT = DocumentContext(user_id="u", workspace_id="w1", document_id="d1", user
 def mcp(mocker):
     client = MagicMock()
     client.aclose = AsyncMock()
+    client.call_tool = AsyncMock(return_value=("{}", False))
     mocker.patch.object(cell, "McpClient", return_value=client)
     return client
 
@@ -117,3 +118,40 @@ async def test_sql_and_markdown_edits_are_written_as_the_model_wrote_them(mcp, w
     for kind in ("sql", "markdown"):
         await cell.CellService("k", "m", kind, CONTEXT, "c1").edit("x")
         assert write.await_args.kwargs["transform"] is None
+
+
+@pytest.mark.asyncio
+async def test_edit_is_saved_by_the_mcp_server_not_streamed_by_this_service(mcp, write, memory, mocker):
+    publish = mocker.patch("src.util.stream_events.publish_job_event", new=AsyncMock())
+    context = CONTEXT.model_copy(update={"chat_id": "chat-1"})
+
+    await cell.CellService("k", "m", "sql", context, "c1").edit("make it 2")
+
+    # no prompt goes with the edit, so the chat gets the edit alone, not a made-up user message
+    assert "request" not in write.await_args.kwargs
+    publish.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_a_sql_or_python_cell_is_run_after_the_edit(mcp, write, memory):
+    await cell.CellService("k", "m", "python", CONTEXT, "c1").edit("show it")
+
+    mcp.call_tool.assert_awaited_once_with(
+        "run_notebook",
+        {"notebookId": "d1", "workspaceId": "w1", "cellIds": ["c1"]},
+        log=True,
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_markdown_cell_is_not_run(mcp, write, memory):
+    await cell.CellService("k", "m", "markdown", CONTEXT, "c1").edit("x")
+
+    mcp.call_tool.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_a_run_that_fails_to_start_keeps_the_edit(mcp, write, memory):
+    mcp.call_tool.side_effect = RuntimeError("boom")
+
+    await cell.CellService("k", "m", "sql", CONTEXT, "c1").edit("x")

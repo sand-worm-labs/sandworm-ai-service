@@ -32,17 +32,18 @@ class McpClient:
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
-            # The AI service streams its own events for this chat; without
-            # this the MCP would save the same calls to the chat a second time.
-            SKIP_TOOL_LOG_HEADER: "1",
         }
         self._next_id = 0
 
-    async def _rpc(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def _rpc(self, method: str, params: dict[str, Any] | None = None, log: bool = False) -> dict[str, Any]:
         self._next_id += 1
+        # The chat agent streams its own events for its chat, so the server must
+        # not save the same calls a second time. A call made with `log` is
+        # saved by the server instead: its prompt, then the work, in order.
+        headers = self._headers if log else {**self._headers, SKIP_TOOL_LOG_HEADER: "1"}
         response = await self._http.post(
             self._url,
-            headers=self._headers,
+            headers=headers,
             json={"jsonrpc": "2.0", "id": self._next_id, "method": method, "params": params or {}},
         )
         if response.status_code == 401:
@@ -63,9 +64,9 @@ class McpClient:
     async def list_tools(self) -> list[dict[str, Any]]:
         return (await self._rpc("tools/list"))["tools"]
 
-    async def call_tool(self, name: str, arguments: dict[str, Any]) -> tuple[str, bool]:
+    async def call_tool(self, name: str, arguments: dict[str, Any], log: bool = False) -> tuple[str, bool]:
         """Returns (text, is_error). Tool failures come back as text for the model to read."""
-        result = await self._rpc("tools/call", {"name": name, "arguments": arguments})
+        result = await self._rpc("tools/call", {"name": name, "arguments": arguments}, log)
         text = "\n".join(c.get("text", "") for c in result.get("content", []) if c.get("type") == "text")
         return text, bool(result.get("isError"))
 

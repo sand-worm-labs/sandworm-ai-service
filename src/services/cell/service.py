@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Literal
 
@@ -11,6 +12,8 @@ from src.services.prompt_rules import PYTHON_TABLE_RULE
 from src.services.research_memory.models import Attempt
 from src.services.research_memory.service import recall_text, remember_in_background
 from src.services.table_output import render_tables
+
+log = logging.getLogger(__name__)
 
 CellKind = Literal["python", "sql", "markdown"]
 
@@ -89,12 +92,30 @@ class CellService:
                 # does not depend on the model following it.
                 transform=render_tables if self.kind == "python" else None,
             )
+            await self._run(mcp)
             self._remember(action, user, True, f"wrote: {written}")
         except CellEditFailed as exc:
             self._remember(action, user, False, str(exc))
             raise
         finally:
             await mcp.aclose()
+
+    async def _run(self, mcp: McpClient) -> None:
+        """Run the cell after an edit or fix, so its result is current. A run that cannot start leaves the edit in place."""
+        if self.kind == "markdown":
+            return
+        try:
+            await mcp.call_tool(
+                "run_notebook",
+                {
+                    "notebookId": self.context.document_id,
+                    "workspaceId": self.context.workspace_id,
+                    "cellIds": [self.block_id],
+                },
+                log=True,
+            )
+        except Exception:
+            log.warning("could not run cell %s after the edit", self.block_id, exc_info=True)
 
     def _remember(self, action: str, request: str, worked: bool, result: str) -> None:
         remember_in_background(

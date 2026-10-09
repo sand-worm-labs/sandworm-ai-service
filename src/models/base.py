@@ -26,7 +26,9 @@ class ChatContext(BaseContext):
     chat_id: str
 
 class DocumentContext(BaseContext):
-    """Document-scoped context — no chat_id."""
+    """Document-scoped context. chat_id is set when the edit was made from a chat, so the AI service can stream the result to it."""
+
+    chat_id: str | None = None
 
 
 class BaseAiRequest(BaseModel):

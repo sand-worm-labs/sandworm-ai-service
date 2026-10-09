@@ -4,17 +4,22 @@ import asyncio
 import logging
 
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client.models import Distance, Modifier, SparseVectorParams, VectorParams
 
 logger = logging.getLogger("sandworm")
 
 VECTOR_SIZE = 3072
-LOCAL_VECTOR_SIZE = 384  # BAAI/bge-small-en-v1.5, see util/embeddings.py
 
-COLLECTIONS: dict[str, VectorParams] = {
-    "sandworm_tools": VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
-    # Every notebook's content and every attempt the AI made, so past work informs new work.
-    "notebook_memory": VectorParams(size=LOCAL_VECTOR_SIZE, distance=Distance.COSINE),
+# What each collection is created with (create_collection keyword arguments).
+COLLECTIONS: dict[str, dict] = {
+    "sandworm_tools": {"vectors_config": VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE)},
+    # Every notebook's content and every attempt the AI made, so past work informs
+    # new work. Searched by hashed words (BM25), not by a model: sparse vectors
+    # only, with Qdrant weighting rare words higher (see research_memory/text_vector).
+    "notebook_memory_text": {
+        "vectors_config": {},
+        "sparse_vectors_config": {"text": SparseVectorParams(modifier=Modifier.IDF)},
+    },
 }
 
 _client: AsyncQdrantClient | None = None
@@ -32,9 +37,9 @@ async def init_qdrant(url: str, api_key: str | None = None) -> None:
 
     for attempt in range(1, _CONNECT_RETRIES + 1):
         try:
-            for name, params in COLLECTIONS.items():
+            for name, config in COLLECTIONS.items():
                 if not await client.collection_exists(name):
-                    await client.create_collection(collection_name=name, vectors_config=params)
+                    await client.create_collection(collection_name=name, **config)
             break
         except Exception:
             if attempt == _CONNECT_RETRIES:

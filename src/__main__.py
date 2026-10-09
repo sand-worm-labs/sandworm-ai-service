@@ -20,6 +20,7 @@ from src.web.routes.cell.router import code_router, markdown_router, sql_router
 from src.web.routes.chat.completions import router as completions_router
 from src.web.routes.chat.title import router as chat_title_router
 from src.web.routes.health.router import router as health_router
+from src.web.routes.notebook.router import router as notebook_router
 from src.web.routes.select_tool.router import router as select_tool_router
 
 
@@ -77,6 +78,12 @@ app.include_router(
     dependencies=[Depends(verify_handshake)],
 )
 
+
+app.include_router(
+    notebook_router,
+    prefix="/notebook",
+    dependencies=[Depends(verify_handshake)],
+)
 
 app.include_router(
     code_router,

@@ -8,6 +8,8 @@ class CompletionRequest(BaseModel):
     model: str
     openrouter_api_key: str
     context: ChatContext
+    # One job per user message, named by the API so it can tell this message's events from any other's.
+    job_id: str | None = None
     derived_context: str | None = None
     stream: bool = False
     temperature: float = 0.7

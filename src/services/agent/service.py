@@ -5,19 +5,35 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
+from openai import AsyncOpenAI
+from pydantic_ai import Agent, Tool
+from pydantic_ai.exceptions import ModelHTTPError, UsageLimitExceeded
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelRequest,
+    ModelResponse,
+    SystemPromptPart,
+    TextPart,
+    UserPromptPart,
+)
+from pydantic_ai.models.openrouter import OpenRouterModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai.settings import ModelSettings
+from pydantic_ai.usage import UsageLimits
 
 from src.config.settings import settings
 from src.models.base import ChatContext, Message
+from src.services.agent.intent import classify, narrow
 from src.services.agent.mcp_client import McpClient, McpError
 from src.services.agent.memory import attempt_for, prior_research, remember
-from src.services.agent.model import call_model
 from src.services.agent.tools import invalid_arguments, select_tools, to_openrouter_tool
 from src.services.research_memory.models import Attempt
-from src.util.cache import clear_active_job, is_job_cancelled
+from src.util.cache import clear_active_job, clear_job_cancel, is_job_cancelled
 from src.util.stream_events import StreamEnvelope
 
 log = logging.getLogger("sandworm.agent")
@@ -49,7 +65,7 @@ def system_prompt(context: ChatContext, mcp_instructions: str, prior_research: s
         part
         for part in [
             "You are Sandworm's onchain analytics assistant, working for the user through Sandworm's tools.",
-            f"You are in notebook {context.document_id} of workspace {context.workspace_id}; pass these ids to tools that take them.{focused}",
+            f"You are in notebook {context.document_id} of workspace {context.workspace_id}; pass these ids to tools that take them. Work in this notebook: do not look up other workspaces or notebooks unless the user asks.{focused}",
             "Use the tools to do the work instead of describing it, and never invent figures: report what the tools returned.",
             mcp_instructions,
             prior_research,
@@ -58,10 +74,27 @@ def system_prompt(context: ChatContext, mcp_instructions: str, prior_research: s
     )
 
 
-async def _chat(
-    http: httpx.AsyncClient, state: AgentState, messages: list[dict], tools: list[dict]
-) -> tuple[dict[str, Any], int]:
-    return await call_model(http, state.api_key, state.model, messages, tools, state.temperature, state.max_tokens)
+class JobCancelled(Exception):
+    """The user stopped the chat while the agent was working."""
+
+
+def _make_model(state: AgentState, http: httpx.AsyncClient) -> OpenRouterModel:
+    """The user's own OpenRouter key and chosen model."""
+    client = AsyncOpenAI(base_url=settings.openrouter_base_url, api_key=state.api_key, http_client=http)
+    return OpenRouterModel(state.model, provider=OpenRouterProvider(openai_client=client))
+
+
+def _history(messages: list[Message]) -> list[ModelMessage]:
+    """The chat so far, as the harness's message types. The last user message is sent separately."""
+    history: list[ModelMessage] = []
+    for m in messages:
+        if m.role == "user":
+            history.append(ModelRequest(parts=[UserPromptPart(content=m.content)]))
+        elif m.role == "assistant":
+            history.append(ModelResponse(parts=[TextPart(content=m.content)]))
+        elif m.role == "system":
+            history.append(ModelRequest(parts=[SystemPromptPart(content=m.content)]))
+    return history
 
 
 async def _finish(state: AgentState, envelope: StreamEnvelope, text: str) -> AgentState:
@@ -117,39 +150,86 @@ async def _run_tool_call(
     return {"role": "tool", "tool_call_id": call["id"], "content": text}
 
 
+def _build_tools(
+    specs: list[dict[str, Any]], schemas: dict[str, dict], mcp: McpClient, state: AgentState, envelope: StreamEnvelope
+) -> list[Tool]:
+    """One harness tool per MCP tool. Each call still goes through _run_tool_call, so argument
+    checks, cards in the chat, progress lines and notebook memory work as before."""
+
+    def make(name: str) -> Callable[..., Awaitable[str]]:
+        async def call(**arguments: Any) -> str:
+            if await is_job_cancelled(state.job_id):
+                raise JobCancelled
+            message = await _run_tool_call(
+                {"id": str(uuid.uuid4()), "function": {"name": name, "arguments": json.dumps(arguments)}},
+                schemas,
+                mcp,
+                state,
+                envelope,
+            )
+            return message["content"]
+
+        return call
+
+    return [
+        Tool.from_schema(
+            make(spec["function"]["name"]),
+            name=spec["function"]["name"],
+            description=spec["function"].get("description", ""),
+            json_schema=spec["function"]["parameters"],
+            sequential=True,  # notebook edits (add/update/delete cell) are order-dependent
+        )
+        for spec in specs
+    ]
+
+
 async def _loop(
     state: AgentState, envelope: StreamEnvelope, mcp: McpClient, http: httpx.AsyncClient, prior: str
 ) -> AgentState:
-    tools = [to_openrouter_tool(t) for t in select_tools(await mcp.list_tools())]
-    schemas = {t["function"]["name"]: t["function"]["parameters"] for t in tools}
-    messages: list[dict[str, Any]] = [
-        {"role": "system", "content": system_prompt(state.context, await mcp.instructions(), prior)},
-        *({"role": m.role, "content": m.content} for m in state.messages),
-    ]
-    tokens_used = 0
+    if await is_job_cancelled(state.job_id):
+        log.info("agent cancelled for chat_id=%s", state.context.chat_id)
+        return state
 
-    for _ in range(settings.AGENT_MAX_STEPS):
-        if await is_job_cancelled(state.context.chat_id):
-            log.info("agent cancelled for chat_id=%s", state.context.chat_id)
-            return state
-        if tokens_used >= settings.AGENT_MAX_TOKENS:
+    specs = [to_openrouter_tool(t) for t in select_tools(await mcp.list_tools())]
+    intent = await classify(http, state.api_key, state.model, state.messages)
+    log.info("agent intent=%s chat_id=%s", intent, state.context.chat_id)
+    specs = narrow(specs, intent)
+    schemas = {t["function"]["name"]: t["function"]["parameters"] for t in specs}
+
+    last_user = next((i for i in range(len(state.messages) - 1, -1, -1) if state.messages[i].role == "user"), None)
+    prompt = state.messages[last_user].content if last_user is not None else ""
+    earlier = [m for i, m in enumerate(state.messages) if i != last_user]
+
+    agent = Agent(
+        _make_model(state, http),
+        instructions=system_prompt(state.context, await mcp.instructions(), prior),
+        tools=_build_tools(specs, schemas, mcp, state, envelope),
+        model_settings=ModelSettings(
+            temperature=settings.AGENT_TEMPERATURE, max_tokens=state.max_tokens, parallel_tool_calls=False
+        ),
+    )
+    limits = UsageLimits(request_limit=settings.AGENT_MAX_STEPS, total_tokens_limit=settings.AGENT_MAX_TOKENS)
+
+    try:
+        result = await agent.run(prompt, message_history=_history(earlier), usage_limits=limits)
+    except JobCancelled:
+        log.info("agent cancelled for chat_id=%s", state.context.chat_id)
+        return state
+    except UsageLimitExceeded as exc:
+        if "token" in str(exc).lower():
             return await _finish(
                 state, envelope, "I hit the token limit for one request. Ask me to continue and I will pick up from here."
             )
-
-        message, used = await _chat(http, state, messages, tools)
-        tokens_used += used
-        calls = message.get("tool_calls") or []
-        if not calls:
-            return await _finish(state, envelope, message.get("content") or "")
-
-        messages.append({"role": "assistant", "content": message.get("content"), "tool_calls": calls})
-        for call in calls:
-            messages.append(await _run_tool_call(call, schemas, mcp, state, envelope))
-
-    return await _finish(
-        state, envelope, "I ran out of steps before finishing. Ask me to continue and I will pick up from here."
-    )
+        return await _finish(
+            state, envelope, "I ran out of steps before finishing. Ask me to continue and I will pick up from here."
+        )
+    except ModelHTTPError as exc:
+        if exc.status_code == 404 and "tool" in str(exc.body).lower():
+            raise RuntimeError(
+                f"The model {state.model} cannot call tools, which chat needs. Pick another model in the model menu."
+            ) from exc
+        raise
+    return await _finish(state, envelope, result.output or "")
 
 
 async def run_agent(
@@ -187,7 +267,7 @@ async def run_chat(state: AgentState) -> AgentState:
 
         mcp = McpClient(settings.MCP_URL, state.context.user_token)
         try:
-            if await is_job_cancelled(chat_id):
+            if await is_job_cancelled(state.job_id):
                 log.info("chat cancelled before start for chat_id=%s", chat_id)
             else:
                 state = await run_agent(state, envelope, mcp)
@@ -204,4 +284,5 @@ async def run_chat(state: AgentState) -> AgentState:
         await envelope.error("error", str(exc))
         raise
     finally:
-        await clear_active_job(chat_id)
+        await clear_active_job(chat_id, state.job_id)
+        await clear_job_cancel(state.job_id)

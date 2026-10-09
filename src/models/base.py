@@ -1,4 +1,5 @@
 from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -9,7 +10,9 @@ class BaseContext(BaseModel):
     workspace_id: str
     document_id: str
     focused_block_ids: list[str] | None = None
-
+    # The user's Sandworm access token. Everything this service does to a
+    # notebook goes through the MCP server with it, so tools act as this user.
+    user_token: str | None = None
 
 
 class ChatContext(BaseContext):
@@ -30,6 +33,7 @@ class BaseAiRequest(BaseModel):
 
 class BaseEditRequest(BaseModel):
     prompt: str
+    block_id: str
     openrouter_api_key: str
     model: str
     context: DocumentContext
@@ -37,14 +41,17 @@ class BaseEditRequest(BaseModel):
 
 class BaseFixRequest(BaseModel):
     error_message: str
+    block_id: str
     openrouter_api_key: str
     model: str
     context: DocumentContext
 
 
-class BaseCodeResponse(BaseModel):
-    code: str
-    context: DocumentContext
+class CellEditResponse(BaseModel):
+    """The edit itself was made by the MCP server; this only says it happened."""
+
+    cell_id: str
+    updated: bool
 
 
 class Message(BaseModel):

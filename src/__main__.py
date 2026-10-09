@@ -1,31 +1,27 @@
-import asyncio
 import logging
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 log = logging.getLogger("sandworm")
-from fastapi import FastAPI, Depends
+from fastapi import Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+
 from src.config.settings import settings
-from src.util.redis_client import init_redis, close_redis
-from src.util.qdrant import init_qdrant, close_qdrant
+from src.util.qdrant import close_qdrant, init_qdrant
+from src.util.redis_client import close_redis, init_redis
 from src.util.seed_tools import seed_tools
 from src.web.middleware.auth import verify_handshake
-from src.web.routes.health.router import router as health_router
-from src.web.routes.chat.title import router as chat_title_router
+from src.web.routes.cell.router import code_router, markdown_router, sql_router
 from src.web.routes.chat.completions import router as completions_router
-from src.web.routes.document.title import router as document_title_router
-from src.web.routes.intent.test_intent import router as intent_router
-from src.web.routes.code.router import router as code_router
-from src.web.routes.sql.router import router as sql_router
-from src.web.routes.markdown.router import router as markdown_router
+from src.web.routes.chat.title import router as chat_title_router
+from src.web.routes.health.router import router as health_router
 from src.web.routes.select_tool.router import router as select_tool_router
-from src.services.notebook_events.listener import listen as listen_notebook_events
+
 
 async def _dummy_embed(_: str) -> list[float]:
     return [0.0] * 3072
@@ -39,12 +35,7 @@ async def lifespan(app: FastAPI):
     log.info("qdrant connected")
     await seed_tools()
     log.info("tools seeded")
-    listener = asyncio.create_task(listen_notebook_events())
-    log.info("notebook event listener started")
     yield
-    listener.cancel()
-    with suppress(asyncio.CancelledError):
-        await listener
     await close_redis()
     await close_qdrant()
     log.info("shutdown complete")
@@ -86,16 +77,6 @@ app.include_router(
     dependencies=[Depends(verify_handshake)],
 )
 
-app.include_router(
-    document_title_router,
-    prefix="/document",
-    dependencies=[Depends(verify_handshake)],
-)
-app.include_router(
-    intent_router,
-    prefix="/intent",
-    dependencies=[Depends(verify_handshake)],
-)
 
 app.include_router(
     code_router,

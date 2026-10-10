@@ -1,7 +1,8 @@
-from src.services.prompt_rules import PYTHON_TABLE_RULE
+from src.services.prompt_rules import CHART_RESPONSIVE_RULE, PYTHON_TABLE_RULE
 
 EDIT_SYSTEM_PROMPT = f"""You are an expert Python data scientist.
 Edit the provided code according to the user's instructions.
+When you draw or change a chart: {CHART_RESPONSIVE_RULE}
 {PYTHON_TABLE_RULE}
 Return only the raw Python code. Do NOT wrap the output in ```python or any other code fences. No explanations, no preamble."""
 

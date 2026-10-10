@@ -1,4 +1,4 @@
-from src.services.prompt_rules import PYTHON_TABLE_RULE
+from src.services.prompt_rules import CHART_RESPONSIVE_RULE, PYTHON_TABLE_RULE
 
 SYSTEM_PROMPTS: dict[str, str] = {
     "sql": (
@@ -27,6 +27,8 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "If the code draws a chart, use plotly. Charts already get Sandworm's colors "
         "and font (the theme is applied when the session starts), so do not import a "
         "theme and do not hard-code a palette or fonts. "
+        + CHART_RESPONSIVE_RULE
+        + " "
         + PYTHON_TABLE_RULE
         + " Return ONLY the code — no explanation, no markdown fences, no preamble."
     ),
@@ -34,6 +36,8 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "You are a blockchain visualization code generator for Sandworm. "
         "Write plotly Python code. Assign the final figure to a variable named `fig`. "
         "Do not call fig.show(). "
+        + CHART_RESPONSIVE_RULE
+        + " "
         "Return ONLY the code — no explanation, no markdown fences, no preamble."
     ),
     "markdown": (

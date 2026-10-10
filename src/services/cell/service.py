@@ -8,7 +8,7 @@ from src.config.settings import settings
 from src.models.base import DocumentContext
 from src.services.agent.cell_edit import CellEditFailed, CellRef, update_cell_with_mcp
 from src.services.agent.mcp_client import McpClient
-from src.services.prompt_rules import PYTHON_TABLE_RULE
+from src.services.prompt_rules import CHART_RESPONSIVE_RULE, PYTHON_TABLE_RULE
 from src.services.research_memory.models import Attempt
 from src.services.research_memory.service import recall_text, remember_in_background
 from src.services.table_output import render_tables
@@ -40,7 +40,7 @@ MEMORY_NOTE = (
 
 def _apply(kind: CellKind, task: str) -> str:
     # Python cells render a DataFrame as a table, so tables must not be printed.
-    rules = f"{PYTHON_TABLE_RULE}\n" if kind == "python" else ""
+    rules = f"{PYTHON_TABLE_RULE} {CHART_RESPONSIVE_RULE}\n" if kind == "python" else ""
     return (
         f"{task}\n"
         f"{rules}"

@@ -25,3 +25,5 @@ class SandwormTool(BaseModel):
     scope: str = "generic"
     returns: list[ToolReturn] = []
     inputs: list[ToolInput] = []
+    # False marks a tool that's catalogued but not built yet: never indexed.
+    implemented: bool = True

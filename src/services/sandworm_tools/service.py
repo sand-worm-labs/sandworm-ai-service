@@ -5,7 +5,14 @@ from typing import Any
 
 log = logging.getLogger("sandworm.tools")
 
-from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
+from qdrant_client.models import (
+    FieldCondition,
+    Filter,
+    FilterSelector,
+    MatchAny,
+    MatchValue,
+    PointStruct,
+)
 
 from src.services.sandworm_tools.models import SandwormTool
 from src.util.embeddings import embed_texts
@@ -72,6 +79,15 @@ class SandwormToolsService:
                     )
                 )
             await self._client.upsert(collection_name=COLLECTION, points=points)
+
+    async def delete(self, tool_ids: list[str]) -> None:
+        # By payload: point ids come from hash(), which differs between runs.
+        await self._client.delete(
+            collection_name=COLLECTION,
+            points_selector=FilterSelector(
+                filter=Filter(must=[FieldCondition(key="tool_id", match=MatchAny(any=tool_ids))])
+            ),
+        )
 
     async def search(
         self,

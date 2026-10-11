@@ -44,16 +44,27 @@ async def _fetch_tools() -> list[SandwormTool]:
 
 
 async def seed_tools() -> None:
-    if await collection_has_data(COLLECTION):
-        log.info("collection already seeded, skipping")
-        return
-
-    tools = await _fetch_tools()
-    if not tools:
+    catalog = await _fetch_tools()
+    if not catalog:
         log.warning("no tools fetched from %s", CATALOG_TARBALL_URL)
         return
 
-    log.info("seeding %d tools from %s", len(tools), CATALOG_TARBALL_URL)
+    # Tools marked `implemented: false` are never offered: keep them out of the
+    # index, and drop any indexed before they were marked (seeding below only
+    # runs on an empty collection).
+    tools = [t for t in catalog if t.implemented]
+    unimplemented = [t.tool_id for t in catalog if not t.implemented]
     service = SandwormToolsService()
+    has_data = await collection_has_data(COLLECTION)
+
+    if unimplemented and has_data:
+        await service.delete(unimplemented)
+        log.info("removed %d unimplemented tools from the index", len(unimplemented))
+
+    if has_data:
+        log.info("collection already seeded, skipping")
+        return
+
+    log.info("seeding %d tools from %s (%d unimplemented skipped)", len(tools), CATALOG_TARBALL_URL, len(unimplemented))
     await service.upsert(tools)
     log.info("seeding complete")
